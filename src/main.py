@@ -1,14 +1,11 @@
 import os
 import shutil
-from xml.sax.handler import all_features
 
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import mean_squared_error, r2_score, roc_auc_score, roc_curve, accuracy_score
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import random
@@ -20,6 +17,9 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import classification_report
 import graphviz
 from sklearn.tree import export_graphviz, export_text
+from sklearn.neural_network import MLPClassifier
+import tensorflow as tf
+from tensorflow.keras import layers, models
 
 
 # define
@@ -31,7 +31,9 @@ test_size = 0.6
 random_seed = 42
 # =========================
 
-qa_1_path = "../out/visualizations"
+qa_1_path = "../out/q_a/visualizations"
+qa_2_path = "../out/q_a/model_results"
+
 
 
 if ed_state == 0:
@@ -40,7 +42,8 @@ if ed_state == 0:
         shutil.rmtree("../out")
     os.makedirs("../out", exist_ok=True)
     os.makedirs(qa_1_path, exist_ok=True)
-    achieve_data.mkdir(qa_1_path)
+    os.makedirs(qa_2_path, exist_ok=True)
+    # achieve_data.mkdir(qa_1_path)
 
 
 def data_cleaning(df):
@@ -49,6 +52,12 @@ def data_cleaning(df):
     # 使用map函数将sex列中的字符替换为数字
     df['Sex'] = df['Sex'].map(sex_mapping)
     return df
+
+def select_features_and_target(data):
+    feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
+    X = data[feature_columns]
+    y = data['Age Class']
+    return X, y
 
 def analyze_and_visualize_abalone_data(data, output_dir):
 
@@ -117,11 +126,8 @@ def categorize_rings(df):
     return df
 
 # Function to train and evaluate Decision Tree models with multiple experimental runs using different hyperparameters
-
-def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size):
-    feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
-    X = data[feature_columns]
-    y = data['Age Class']
+def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
+    X, y = select_features_and_target(data)
 
     best_accuracy = 0
     best_model = None
@@ -177,27 +183,26 @@ def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size):
     dot_data = export_graphviz(
         best_model,
         out_file=None,
-        feature_names=feature_columns,
+        feature_names=X.columns,
         class_names=class_names,
         filled=True,
         rounded=True,
         special_characters=True
     )
     graph = graphviz.Source(dot_data)
-    graph.render(f"{qa_1_path}/best_decision_tree", format='png', cleanup=True)
+    graph.render(f"{output_dir}/best_decision_tree", format='png', cleanup=True)
 
     # Translate selected nodes and leaves into IF and THEN rules
-    tree_rules = export_text(best_model, feature_names=feature_columns)
+    tree_rules = export_text(best_model, feature_names=X.columns)
     print("Rules from the best decision tree:\n")
     print(tree_rules)
 
     return best_model, X_train, X_test, y_train, y_test
 
+
 # Function to train and evaluate Decision Tree models with pruning
-def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size):
-    feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
-    X = data[feature_columns]
-    y = data['Age Class']
+def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
+    X, y = select_features_and_target(data)
 
     best_accuracy = 0
     best_model = None
@@ -213,7 +218,7 @@ def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size):
         min_samples_leaf = np.random.randint(1, 5)
 
         # Initialize and train the Decision Tree classifier with pruning
-        clf = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, random_state=random_seed)
+        clf = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, random_state=random_seed + i)
         clf.fit(X_train, y_train)
 
         # Make predictions
@@ -244,19 +249,17 @@ def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size):
     print(f"Best Testing Accuracy: {best_accuracy:.4f}\n")
 
     # Visualize the best pruned Decision Tree using Graphviz
-    sanitized_class_names = [str(label).replace(" ", "_").replace(":", "").replace(">", "greater") for label in
-                             best_model.classes_]
-    dot_data = export_graphviz(best_model, out_file=None, feature_names=feature_columns,
+    sanitized_class_names = [str(label).replace(" ", "_").replace(":", "").replace(">", "greater") for label in best_model.classes_]
+    dot_data = export_graphviz(best_model, out_file=None, feature_names=X.columns,
                                class_names=sanitized_class_names, filled=True, rounded=True, special_characters=True)
     graph = graphviz.Source(dot_data)
-    graph.render(f"{qa_1_path}/best_pruned_decision_tree", format='png', cleanup=True)
+    graph.render(f"{output_dir}/best_pruned_decision_tree", format='png', cleanup=True)
 
     return best_model, X_train, X_test, y_train, y_test
 
+
 def apply_random_forests(data, max_num_trees, test_size, random_seed, output_dir):
-    feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
-    X = data[feature_columns]
-    y = data['Age Class']
+    X, y = select_features_and_target(data)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
 
@@ -287,9 +290,7 @@ def apply_random_forests(data, max_num_trees, test_size, random_seed, output_dir
     plt.close()
 
 def train_and_evaluate_xgboost(data, test_size, random_seed, output_dir):
-    feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
-    X = data[feature_columns]
-    y = data['Age Class']
+    X, y = select_features_and_target(data)
 
     # Convert y to numerical labels
     y = y.cat.codes
@@ -309,7 +310,7 @@ def train_and_evaluate_xgboost(data, test_size, random_seed, output_dir):
 
     # Plotting feature importance
     plt.figure(figsize=(10, 6))
-    plt.barh(feature_columns, xgb_model.feature_importances_)
+    plt.barh(X.columns, xgb_model.feature_importances_)
     plt.xlabel('Feature Importance')
     plt.title('XGBoost Feature Importance')
     plt.tight_layout()
@@ -319,9 +320,7 @@ def train_and_evaluate_xgboost(data, test_size, random_seed, output_dir):
     return xgb_model
 
 def train_and_evaluate_gradient_boosting(data, test_size, random_seed, output_dir):
-    feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
-    X = data[feature_columns]
-    y = data['Age Class']
+    X, y = select_features_and_target(data)
 
     # Convert y to numerical labels
     y = y.cat.codes
@@ -341,7 +340,7 @@ def train_and_evaluate_gradient_boosting(data, test_size, random_seed, output_di
 
     # Plotting feature importance
     plt.figure(figsize=(10, 6))
-    plt.barh(feature_columns, gb_model.feature_importances_)
+    plt.barh(X.columns, gb_model.feature_importances_)
     plt.xlabel('Feature Importance')
     plt.title('Gradient Boosting Feature Importance')
     plt.tight_layout()
@@ -349,6 +348,85 @@ def train_and_evaluate_gradient_boosting(data, test_size, random_seed, output_di
     plt.close()
 
     return gb_model
+
+# Function to train and evaluate Neural Network model using Adam optimizer
+def train_and_evaluate_nn_adam(data, test_size, random_seed, output_dir):
+    X, y = select_features_and_target(data)
+
+    # Convert y to numerical labels
+    y = y.cat.codes
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
+
+    # Initialize and train the neural network with Adam optimizer
+    nn_model_adam = MLPClassifier(hidden_layer_sizes=(100,), solver='adam', max_iter=500, random_state=random_seed)
+    nn_model_adam.fit(X_train, y_train)
+
+    # Make predictions
+    y_pred = nn_model_adam.predict(X_test)
+
+    # Evaluate performance
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Neural Network (Adam) Model Accuracy: {accuracy:.4f}\n")
+
+    return nn_model_adam
+
+# Function to train and evaluate Neural Network model using SGD optimizer
+def train_and_evaluate_nn_sgd(data, test_size, random_seed, output_dir):
+    X, y = select_features_and_target(data)
+
+    # Convert y to numerical labels
+    y = y.cat.codes
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
+
+    # Initialize and train the neural network with SGD optimizer
+    nn_model_sgd = MLPClassifier(hidden_layer_sizes=(100,), solver='sgd', max_iter=500, random_state=random_seed)
+    nn_model_sgd.fit(X_train, y_train)
+
+    # Make predictions
+    y_pred = nn_model_sgd.predict(X_test)
+
+    # Evaluate performance
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Neural Network (SGD) Model Accuracy: {accuracy:.4f}\n")
+
+    return nn_model_sgd
+
+# Function to compare L2 regularisation (weight decay) with dropouts using Adam optimizer
+def compare_l2_and_dropout(data, test_size, random_seed, output_dir):
+    X, y = select_features_and_target(data)
+
+    # Convert y to numerical labels
+    y = y.cat.codes
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
+
+    # Define different combinations of hyperparameters for dropout rate and weight decay (L2 regularization)
+    hyperparameter_combinations = [
+        {'dropout_rate': 0.2, 'l2_lambda': 0.001},
+        {'dropout_rate': 0.3, 'l2_lambda': 0.01},
+        {'dropout_rate': 0.5, 'l2_lambda': 0.0001}
+    ]
+
+    for idx, params in enumerate(hyperparameter_combinations):
+        model = models.Sequential()
+        model.add(layers.InputLayer(shape=(X_train.shape[1],)))
+        model.add(layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(params['l2_lambda'])))
+        model.add(layers.Dropout(params['dropout_rate']))
+        model.add(layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(params['l2_lambda'])))
+        model.add(layers.Dropout(params['dropout_rate']))
+        model.add(layers.Dense(4, activation='softmax'))
+
+        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+        # Train the model
+        history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), verbose=0)
+
+        # Evaluate the model
+        test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+        print(f"Model {idx + 1} - Dropout Rate: {params['dropout_rate']}, L2 Lambda: {params['l2_lambda']}")
+        print(f"Test Accuracy: {test_accuracy:.4f}\n")
 
 
 
@@ -365,29 +443,40 @@ def main():
     # sex数据清洗
     abalone = data_cleaning(abalone)
 
+
     # Call the function with appropriate paths
     analyze_and_visualize_abalone_data(abalone, qa_1_path)
 
     print("\nTraining and Evaluating Unpruned Decision Tree:\n")
-    best_unpruned_model, X_train, X_test, y_train, y_test = train_and_evaluate_unpruned_decision_tree(abalone, num_experiments, test_size)
+    best_unpruned_model, X_train, X_test, y_train, y_test = train_and_evaluate_unpruned_decision_tree(abalone, num_experiments, test_size, random_seed, qa_2_path)
 
     # Train and evaluate Decision Tree models with pruning
     print("\nTraining and Evaluating Pruned Decision Tree:\n")
-    best_pruned_model, _, _, _, _ = train_and_evaluate_pruned_decision_tree(abalone, num_experiments, test_size)
+    best_pruned_model, _, _, _, _ = train_and_evaluate_pruned_decision_tree(abalone, num_experiments, test_size, random_seed, qa_2_path)
 
     # Apply Random Forest classifier and evaluate performance
     print("\nApplying Random Forests and Evaluating Performance:\n")
-    apply_random_forests(abalone, max_num_trees=50, test_size=test_size, random_seed=random_seed, output_dir=qa_1_path)
+    apply_random_forests(abalone, max_num_trees=50, test_size=test_size, random_seed=random_seed, output_dir=qa_2_path)
 
     # Train and evaluate XGBoost model
     print("\nTraining and Evaluating XGBoost Model:\n")
-    xgb_model = train_and_evaluate_xgboost(abalone, test_size, random_seed, qa_1_path)
+    xgb_model = train_and_evaluate_xgboost(abalone, test_size, random_seed, qa_2_path)
 
     # Train and evaluate Gradient Boosting model
     print("\nTraining and Evaluating Gradient Boosting Model:\n")
-    gb_model = train_and_evaluate_gradient_boosting(abalone, test_size, random_seed, qa_1_path)
+    gb_model = train_and_evaluate_gradient_boosting(abalone, test_size, random_seed, qa_2_path)
 
+    # Train and evaluate Neural Network with Adam optimizer
+    print("\nTraining and Evaluating Neural Network with Adam Optimizer:\n")
+    nn_model_adam = train_and_evaluate_nn_adam(abalone, test_size, random_seed, qa_2_path)
 
+    # Train and evaluate Neural Network with SGD optimizer
+    print("\nTraining and Evaluating Neural Network with SGD Optimizer:\n")
+    nn_model_sgd = train_and_evaluate_nn_sgd(abalone, test_size, random_seed, qa_2_path)
+
+    # Compare L2 regularisation (weight decay) with dropouts using Adam optimizer
+    print("\nComparing L2 Regularisation with Dropouts using Adam Optimizer:\n")
+    compare_l2_and_dropout(abalone, test_size, random_seed, qa_2_path)
 
 if __name__ == "__main__":
     main()
