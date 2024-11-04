@@ -6,7 +6,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score, roc_auc_score, roc_curve, accuracy_score
+from sklearn.metrics import mean_squared_error, r2_score, roc_auc_score, roc_curve, accuracy_score, f1_score
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import random
 
@@ -32,19 +32,21 @@ random_seed = 42
 # =========================
 
 qa_1_path = "../out/q_a/visualizations"
-qa_2_path = "../out/q_a/model_results"
-
+qa_2_path = "../results/q_a"
+results_file_path = f"{qa_2_path}/model_results.csv"
+best_results_file_path = f"{qa_2_path}/best_model_results.csv"
 
 
 if ed_state == 0:
     import achieve_data
+
     if os.path.exists("../out"):
         shutil.rmtree("../out")
     os.makedirs("../out", exist_ok=True)
+    os.makedirs("../out/q_a/model_results", exist_ok=True)
     os.makedirs(qa_1_path, exist_ok=True)
     os.makedirs(qa_2_path, exist_ok=True)
     # achieve_data.mkdir(qa_1_path)
-
 
 def data_cleaning(df):
     # 创建字典，将字符映射为数字
@@ -53,17 +55,237 @@ def data_cleaning(df):
     df['Sex'] = df['Sex'].map(sex_mapping)
     return df
 
+def encode_target(y):
+    target_mapping = {
+        'Class_1_0_7_years': 0,
+        'Class_2_8_10_years': 1,
+        'Class_3_11_15_years': 2,
+        'Class_4_greater_15_years': 3
+    }
+    return y.map(target_mapping)
+
 def select_features_and_target(data):
     feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
     X = data[feature_columns]
     y = data['Age Class']
     return X, y
 
-def analyze_and_visualize_abalone_data(data, output_dir):
+def save_results_to_csv(results, output_file):
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(output_file, index=False)
 
+def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
+    X, y = select_features_and_target(data)
+
+    # Store performance metrics for each experiment
+    experiment_metrics = []
+
+    best_accuracy = 0
+    best_auc = 0
+    best_f1 = 0
+    best_model = None
+    best_params = {}
+
+    for i in range(num_experiments):
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + i)
+
+        # Define hyperparameters
+        max_depth = np.random.choice([None, 3, 5, 7, 10 ])
+        min_samples_split = np.random.choice([2, 5, 10])
+        min_samples_leaf = np.random.choice([1, 2, 4])
+
+        # Initialize and train the Decision Tree classifier
+        clf = DecisionTreeClassifier(
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            random_state=random_seed + i
+        )
+        clf.fit(X_train, y_train)
+
+        # Make predictions
+        y_pred_test = clf.predict(X_test)
+
+        # Calculate metrics
+        test_accuracy = accuracy_score(y_test, y_pred_test)
+        f1 = f1_score(y_test, y_pred_test, average='weighted')
+        auc = roc_auc_score(y_test, clf.predict_proba(X_test), multi_class='ovr')
+
+        # Store experiment metrics
+        experiment_metrics.append({
+            'Experiment': i + 1,
+            'Max Depth': max_depth,
+            'Min Samples Split': min_samples_split,
+            'Min Samples Leaf': min_samples_leaf,
+            'Test Accuracy': test_accuracy,
+            'F1 Score': f1,
+            'AUC': auc
+        })
+
+        # Track the best model
+        if test_accuracy > best_accuracy:
+            best_accuracy = test_accuracy
+            best_auc = auc
+            best_f1 = f1
+            best_model = clf
+            best_params = {
+                'max_depth': max_depth,
+                'min_samples_split': min_samples_split,
+                'min_samples_leaf': min_samples_leaf
+            }
+
+    # Visualize the best Decision Tree and print IF-THEN rules
+    dot_data = export_graphviz(
+        best_model, feature_names=X.columns, class_names=best_model.classes_.astype(str),
+        filled=True, rounded=True, special_characters=True
+    )
+    graph = graphviz.Source(dot_data)
+    graph.render(f"{output_dir}/best_unpruned_tree", format='png', cleanup=True)
+
+    print(f"Best Model Parameters (Unpruned): {best_params}")
+    print(f"Best Model Test Accuracy (Unpruned): {best_accuracy:.4f}")
+    print("IF-THEN rules for the best unpruned decision tree:\n")
+    print(export_text(best_model, feature_names=X.columns))
+
+    # Compute summary statistics
+    metrics_df = pd.DataFrame(experiment_metrics)
+    summary_statistics = metrics_df[['Test Accuracy', 'F1 Score', 'AUC']].agg(['mean', 'var', 'std']).T
+
+    # Return metrics, summary statistics, best model, best parameters, and best scores
+    return metrics_df, summary_statistics, best_model, best_params, best_accuracy, best_auc, best_f1
+
+def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
+    X, y = select_features_and_target(data)
+
+    # Store performance metrics for each experiment
+    experiment_metrics = []
+
+    best_accuracy = 0
+    best_auc = 0
+    best_f1 = 0
+    best_model = None
+    best_params = {}
+
+    for i in range(num_experiments):
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + i)
+
+        # Define hyperparameters
+        max_depth = np.random.randint(3, 10)
+        min_samples_split = np.random.randint(2, 10)
+        min_samples_leaf = np.random.randint(1, 5)
+
+        # Initialize and train the Decision Tree classifier with pruning
+        clf = DecisionTreeClassifier(
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            random_state=random_seed + i
+        )
+        clf.fit(X_train, y_train)
+
+        # Make predictions
+        y_pred_test = clf.predict(X_test)
+
+        # Calculate metrics
+        test_accuracy = accuracy_score(y_test, y_pred_test)
+        f1 = f1_score(y_test, y_pred_test, average='weighted')
+        auc = roc_auc_score(y_test, clf.predict_proba(X_test), multi_class='ovr')
+
+        # Store experiment metrics
+        experiment_metrics.append({
+            'Experiment': i + 1,
+            'Max Depth': max_depth,
+            'Min Samples Split': min_samples_split,
+            'Min Samples Leaf': min_samples_leaf,
+            'Test Accuracy': test_accuracy,
+            'F1 Score': f1,
+            'AUC': auc
+        })
+
+        # Track the best model
+        if test_accuracy > best_accuracy:
+            best_accuracy = test_accuracy
+            best_auc = auc
+            best_f1 = f1
+            best_model = clf
+            best_params = {
+                'max_depth': max_depth,
+                'min_samples_split': min_samples_split,
+                'min_samples_leaf': min_samples_leaf
+            }
+
+    # Visualize the best Pruned Decision Tree and print IF-THEN rules
+    dot_data = export_graphviz(
+        best_model, feature_names=X.columns, class_names=best_model.classes_.astype(str),
+        filled=True, rounded=True, special_characters=True
+    )
+    graph = graphviz.Source(dot_data)
+    graph.render(f"{output_dir}/best_pruned_tree", format='png', cleanup=True)
+
+    print(f"Best Model Parameters (Pruned): {best_params}")
+    print(f"Best Model Test Accuracy (Pruned): {best_accuracy:.4f}")
+    print("IF-THEN rules for the best pruned decision tree:\n")
+    print(export_text(best_model, feature_names=X.columns))
+
+    # Compute summary statistics
+    metrics_df = pd.DataFrame(experiment_metrics)
+    summary_statistics = metrics_df[['Test Accuracy', 'F1 Score', 'AUC']].agg(['mean', 'var', 'std']).T
+
+    # Return metrics, summary statistics, best model, best parameters, and best scores
+    return metrics_df, summary_statistics, best_model, best_params, best_accuracy, best_auc, best_f1
+
+def train_and_evaluate_model(model, data, num_experiments, random_seed):
+
+    accuracies, aucs, f1_scores = [], [], []
+    best_accuracy, best_auc, best_f1 = 0, 0, 0
+
+    for i in range(num_experiments):
+
+        X, y = select_features_and_target(data)
+        y = encode_target(y)  # Encode target labels
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=i + random_seed)
+
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        accuracy = accuracy_score(y_test, y_pred)
+        auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred), multi_class='ovr')
+        f1 = f1_score(y_test, y_pred, average='weighted')
+
+        accuracies.append(accuracy)
+        aucs.append(auc)
+        f1_scores.append(f1)
+
+        # Update best values if current experiment scores are higher
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+        if auc > best_auc:
+            best_auc = auc
+        if f1 > best_f1:
+            best_f1 = f1
+
+    # Calculate means, standard deviations, and variances
+    mean_accuracy = np.mean(accuracies)
+    std_accuracy = np.std(accuracies)
+    var_accuracy = np.var(accuracies)
+
+    mean_auc = np.mean(aucs)
+    std_auc = np.std(aucs)
+    var_auc = np.var(aucs)
+
+    mean_f1 = np.mean(f1_scores)
+    std_f1 = np.std(f1_scores)
+    var_f1 = np.var(f1_scores)
+
+    return (mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc,
+            mean_f1, std_f1, var_f1, best_accuracy, best_auc, best_f1)
+
+def analyze_and_visualize_abalone_data(data, output_dir):
     # Define age classes based on the rings
     age_bins = [0, 7, 10, 15, float('inf')]
-    age_labels = ['Class 1: 0-7 years', 'Class 2: 8-10 years', 'Class 3: 11-15 years', 'Class 4: >15 years']
+    age_labels = ['Class_1_0_7_years', 'Class_2_8_10_years', 'Class_3_11_15_years', 'Class_4_greater_15_years']
     data['Age Class'] = pd.cut(data['Rings'], bins=age_bins, labels=age_labels, right=True)
 
     # Update feature column names to match dataset
@@ -116,320 +338,111 @@ def analyze_and_visualize_abalone_data(data, output_dir):
     # Save the summary statistics as a CSV file
     summary_stats.to_csv(os.path.join(output_dir, 'summary_statistics.csv'), index=True)
 
-
-# Function to categorize Rings into Age Classes
-def categorize_rings(df):
-    # Define age classes based on the rings
-    age_bins = [0, 7, 10, 15, float('inf')]
-    age_labels = ['Class_1_0_7_years', 'Class_2_8_10_years', 'Class_3_11_15_years', 'Class_4_greater_15_years']
-    df['Age Class'] = pd.cut(df['Rings'], bins=age_bins, labels=age_labels, right=True)
-    return df
-
-# Function to train and evaluate Decision Tree models with multiple experimental runs using different hyperparameters
-def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    best_accuracy = 0
-    best_model = None
-    best_params = {}
-
-    for i in range(num_experiments):  # Perform num_experiments experimental runs
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + i)
-
-        # Randomly select hyperparameters for each experimental run
-        max_depth = np.random.choice([None, 5, 10, 15, 20])
-        min_samples_split = np.random.choice([2, 5, 10])
-        min_samples_leaf = np.random.choice([1, 2, 4])
-
-        # Initialize and train the Decision Tree classifier with selected hyperparameters
-        clf = DecisionTreeClassifier(
-            max_depth=max_depth,
-            min_samples_split=min_samples_split,
-            min_samples_leaf=min_samples_leaf,
-            random_state=random_seed + i
-        )
-        clf.fit(X_train, y_train)
-
-        # Make predictions
-        y_pred_train = clf.predict(X_train)
-        y_pred_test = clf.predict(X_test)
-
-        # Evaluate performance
-        train_accuracy = accuracy_score(y_train, y_pred_train)
-        test_accuracy = accuracy_score(y_test, y_pred_test)
-
-        print(f"Run {i + 1}: Max Depth={max_depth}, Min Samples Split={min_samples_split}, Min Samples Leaf={min_samples_leaf}")
-        print(f"Training Accuracy: {train_accuracy:.4f}")
-        print(f"Testing Accuracy: {test_accuracy:.4f}\n")
-
-        # Keep track of the best model
-        if test_accuracy > best_accuracy:
-            best_accuracy = test_accuracy
-            best_model = clf
-            best_params = {
-                'max_depth': max_depth,
-                'min_samples_split': min_samples_split,
-                'min_samples_leaf': min_samples_leaf
-            }
-
-    # Report the best model
-    print("Best Model Testing Accuracy:")
-    print(f"Best Testing Accuracy: {best_accuracy:.4f}")
-    print(f"Best Hyperparameters: Max Depth={best_params['max_depth']}, Min Samples Split={best_params['min_samples_split']}, Min Samples Leaf={best_params['min_samples_leaf']}\n")
-
-    # Visualize the best Decision Tree using Graphviz
-    class_names = [str(label).replace(" ", "_").replace("<", "less_than_").replace(">", "greater_than_") for label in best_model.classes_]
-    dot_data = export_graphviz(
-        best_model,
-        out_file=None,
-        feature_names=X.columns,
-        class_names=class_names,
-        filled=True,
-        rounded=True,
-        special_characters=True
-    )
-    graph = graphviz.Source(dot_data)
-    graph.render(f"{output_dir}/best_decision_tree", format='png', cleanup=True)
-
-    # Translate selected nodes and leaves into IF and THEN rules
-    tree_rules = export_text(best_model, feature_names=X.columns)
-    print("Rules from the best decision tree:\n")
-    print(tree_rules)
-
-    return best_model, X_train, X_test, y_train, y_test
-
-
-# Function to train and evaluate Decision Tree models with pruning
-def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    best_accuracy = 0
-    best_model = None
-    best_params = {}
-
-    for i in range(num_experiments):  # Perform num_experiments experimental runs
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + i)
-
-        # Define different hyperparameters for each run
-        max_depth = np.random.randint(3, 10)
-        min_samples_split = np.random.randint(2, 10)
-        min_samples_leaf = np.random.randint(1, 5)
-
-        # Initialize and train the Decision Tree classifier with pruning
-        clf = DecisionTreeClassifier(max_depth=max_depth, min_samples_split=min_samples_split, min_samples_leaf=min_samples_leaf, random_state=random_seed + i)
-        clf.fit(X_train, y_train)
-
-        # Make predictions
-        y_pred_train = clf.predict(X_train)
-        y_pred_test = clf.predict(X_test)
-
-        # Evaluate performance
-        train_accuracy = accuracy_score(y_train, y_pred_train)
-        test_accuracy = accuracy_score(y_test, y_pred_test)
-
-        print(f"Run {i + 1}: Max Depth={max_depth}, Min Samples Split={min_samples_split}, Min Samples Leaf={min_samples_leaf}")
-        print(f"Training Accuracy: {train_accuracy:.4f}")
-        print(f"Testing Accuracy: {test_accuracy:.4f}\n")
-
-        # Keep track of the best model
-        if test_accuracy > best_accuracy:
-            best_accuracy = test_accuracy
-            best_model = clf
-            best_params = {
-                'max_depth': max_depth,
-                'min_samples_split': min_samples_split,
-                'min_samples_leaf': min_samples_leaf
-            }
-
-    # Report the best model
-    print("Best Pruned Model Parameters:")
-    print(best_params)
-    print(f"Best Testing Accuracy: {best_accuracy:.4f}\n")
-
-    # Visualize the best pruned Decision Tree using Graphviz
-    sanitized_class_names = [str(label).replace(" ", "_").replace(":", "").replace(">", "greater") for label in best_model.classes_]
-    dot_data = export_graphviz(best_model, out_file=None, feature_names=X.columns,
-                               class_names=sanitized_class_names, filled=True, rounded=True, special_characters=True)
-    graph = graphviz.Source(dot_data)
-    graph.render(f"{output_dir}/best_pruned_decision_tree", format='png', cleanup=True)
-
-    return best_model, X_train, X_test, y_train, y_test
-
-
-def apply_random_forests(data, max_num_trees, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
-
-    accuracies = []
-
-    for n_estimators in range(1, max_num_trees + 1):
-        # Initialize and train Random Forest model
-        rf_model = RandomForestClassifier(n_estimators=n_estimators, random_state=random_seed, n_jobs=-1)
-        rf_model.fit(X_train, y_train)
-
-        # Predict on the test data
-        y_pred = rf_model.predict(X_test)
-
-        # Calculate accuracy
-        accuracy = accuracy_score(y_test, y_pred)
-        accuracies.append(accuracy)
-
-        print(f"Number of Trees: {n_estimators}, Accuracy: {accuracy:.4f}")
-
-    # Plotting accuracy vs. number of trees
-    plt.figure(figsize=(10, 6))
-    plt.plot(range(1, max_num_trees + 1), accuracies, marker='o', linestyle='-', color='b')
-    plt.xlabel('Number of Trees in Ensemble')
-    plt.ylabel('Accuracy Score')
-    plt.title('Accuracy vs. Number of Trees in Random Forest')
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/random_forest_accuracy.png")
-    plt.close()
-
-def train_and_evaluate_xgboost(data, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    # Convert y to numerical labels
-    y = y.cat.codes
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
-
-    # Initialize and train the XGBoost model
-    xgb_model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=random_seed)
-    xgb_model.fit(X_train, y_train)
-
-    # Make predictions
-    y_pred = xgb_model.predict(X_test)
-
-    # Evaluate performance
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"XGBoost Model Accuracy: {accuracy:.4f}\n")
-
-    # Plotting feature importance
-    plt.figure(figsize=(10, 6))
-    plt.barh(X.columns, xgb_model.feature_importances_)
-    plt.xlabel('Feature Importance')
-    plt.title('XGBoost Feature Importance')
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/xgboost_feature_importance.png")
-    plt.close()
-
-    return xgb_model
-
-def train_and_evaluate_gradient_boosting(data, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    # Convert y to numerical labels
-    y = y.cat.codes
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
-
-    # Initialize and train the Gradient Boosting model
-    gb_model = GradientBoostingClassifier(random_state=random_seed)
-    gb_model.fit(X_train, y_train)
-
-    # Make predictions
-    y_pred = gb_model.predict(X_test)
-
-    # Evaluate performance
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"Gradient Boosting Model Accuracy: {accuracy:.4f}\n")
-
-    # Plotting feature importance
-    plt.figure(figsize=(10, 6))
-    plt.barh(X.columns, gb_model.feature_importances_)
-    plt.xlabel('Feature Importance')
-    plt.title('Gradient Boosting Feature Importance')
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/gradient_boosting_feature_importance.png")
-    plt.close()
-
-    return gb_model
-
-# Function to train and evaluate Neural Network model using Adam optimizer
-def train_and_evaluate_nn_adam(data, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    # Convert y to numerical labels
-    y = y.cat.codes
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
-
-    # Initialize and train the neural network with Adam optimizer
-    nn_model_adam = MLPClassifier(hidden_layer_sizes=(100,), solver='adam', max_iter=500, random_state=random_seed)
-    nn_model_adam.fit(X_train, y_train)
-
-    # Make predictions
-    y_pred = nn_model_adam.predict(X_test)
-
-    # Evaluate performance
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"Neural Network (Adam) Model Accuracy: {accuracy:.4f}\n")
-
-    return nn_model_adam
-
-# Function to train and evaluate Neural Network model using SGD optimizer
-def train_and_evaluate_nn_sgd(data, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    # Convert y to numerical labels
-    y = y.cat.codes
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
-
-    # Initialize and train the neural network with SGD optimizer
-    nn_model_sgd = MLPClassifier(hidden_layer_sizes=(100,), solver='sgd', max_iter=500, random_state=random_seed)
-    nn_model_sgd.fit(X_train, y_train)
-
-    # Make predictions
-    y_pred = nn_model_sgd.predict(X_test)
-
-    # Evaluate performance
-    accuracy = accuracy_score(y_test, y_pred)
-    print(f"Neural Network (SGD) Model Accuracy: {accuracy:.4f}\n")
-
-    return nn_model_sgd
-
-# Function to compare L2 regularisation (weight decay) with dropouts using Adam optimizer
-def compare_l2_and_dropout(data, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
-    # Convert y to numerical labels
-    y = y.cat.codes
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
-
-    # Define different combinations of hyperparameters for dropout rate and weight decay (L2 regularization)
+def compare_l2_and_dropout(X_train, X_test, y_train, y_test):
+    y_train = y_train.astype('int')
+    y_test = y_test.astype('int')
+
+    # Define hyperparameter combinations
     hyperparameter_combinations = [
-        {'dropout_rate': 0.2, 'l2_lambda': 0.001},
-        {'dropout_rate': 0.3, 'l2_lambda': 0.01},
-        {'dropout_rate': 0.5, 'l2_lambda': 0.0001}
+        {"dropout_rate": 0.2, "weight_decay": 0.01},
+        {"dropout_rate": 0.3, "weight_decay": 0.001},
+        {"dropout_rate": 0.5, "weight_decay": 0.0001}
     ]
 
-    for idx, params in enumerate(hyperparameter_combinations):
-        model = models.Sequential()
-        model.add(layers.InputLayer(shape=(X_train.shape[1],)))
-        model.add(layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(params['l2_lambda'])))
-        model.add(layers.Dropout(params['dropout_rate']))
-        model.add(layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(params['l2_lambda'])))
-        model.add(layers.Dropout(params['dropout_rate']))
-        model.add(layers.Dense(4, activation='softmax'))
+    results = []
 
-        model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    for i, params in enumerate(hyperparameter_combinations):
+        dropout_rate = params["dropout_rate"]
+        weight_decay = params["weight_decay"]
 
-        # Train the model
-        history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_data=(X_test, y_test), verbose=0)
+        # L2 Regularization Model
+        l2_model = MLPClassifier(
+            hidden_layer_sizes=(100,),
+            solver='adam',
+            alpha=weight_decay,  # L2 regularization strength
+            max_iter=500,
+            random_state=random_seed
+        )
+        l2_model.fit(X_train, y_train)
+        y_pred_l2 = l2_model.predict(X_test)
+        l2_accuracy = accuracy_score(y_test, y_pred_l2)
+        l2_auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred_l2), multi_class='ovr')
+        l2_f1 = f1_score(y_test, y_pred_l2, average='weighted')
 
-        # Evaluate the model
-        test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
-        print(f"Model {idx + 1} - Dropout Rate: {params['dropout_rate']}, L2 Lambda: {params['l2_lambda']}")
-        print(f"Test Accuracy: {test_accuracy:.4f}\n")
+        # Dropout Model using TensorFlow
+        dropout_model = tf.keras.Sequential([
+            layers.InputLayer(shape=(X_train.shape[1],)),
+            layers.Dense(100, activation='relu'),
+            layers.Dropout(dropout_rate),  # Dropout rate
+            layers.Dense(4, activation='softmax')
+        ])
+        dropout_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+        dropout_model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=0)
+        y_pred_dropout = np.argmax(dropout_model.predict(X_test), axis=1)
+        dropout_accuracy = accuracy_score(y_test, y_pred_dropout)
+        dropout_auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred_dropout), multi_class='ovr')
+        dropout_f1 = f1_score(y_test, y_pred_dropout, average='weighted')
 
+        # Append results for each combination
+        results.append({
+            "Combination": f"Dropout rate: {dropout_rate}, Weight decay (λ): {weight_decay}",
+            "L2 Accuracy": l2_accuracy, "L2 AUC": l2_auc, "L2 F1": l2_f1,
+            "Dropout Accuracy": dropout_accuracy, "Dropout AUC": dropout_auc, "Dropout F1": dropout_f1
+        })
 
+        print(f"Combination {i + 1}: Dropout rate {dropout_rate}, Weight decay {weight_decay}")
+        print(f"L2 Model - Accuracy: {l2_accuracy:.4f}, AUC: {l2_auc:.4f}, F1 Score: {l2_f1:.4f}")
+        print(f"Dropout Model - Accuracy: {dropout_accuracy:.4f}, AUC: {dropout_auc:.4f}, F1 Score: {dropout_f1:.4f}")
 
+    # Convert to DataFrame for easier saving and display
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(os.path.join(qa_2_path, "l2_vs_dropout_results.csv"), index=False)
+    print("L2 vs Dropout comparison results saved to l2_vs_dropout_results.csv")
+
+    return results_df
+
+def calculate_and_append_summary(summary_statistics, results, model_name):
+    """
+    Calculates summary statistics (mean, variance, std) for each metric in metrics_df
+    and appends the results to the provided results list.
+
+    Parameters:
+    - metrics_df (pd.DataFrame): DataFrame containing experiment metrics with columns for each metric.
+    - results (list): List to which the summary statistics will be appended.
+    - model_name (str): Name of the model for labeling in the results.
+
+    Returns:
+    - None: The function modifies the results list in place.
+    """
+    # Calculate summary statistics (mean, variance, std) for selected metrics
+    # summary_statistics = metrics_df[['Test Accuracy', 'F1 Score', 'AUC']].agg(['mean', 'var', 'std']).T
+
+    # Extract mean, variance, and std for each metric
+    mean_accuracy = summary_statistics.loc['Test Accuracy', 'mean']
+    var_accuracy = summary_statistics.loc['Test Accuracy', 'var']
+    std_accuracy = summary_statistics.loc['Test Accuracy', 'std']
+
+    mean_auc = summary_statistics.loc['AUC', 'mean']
+    var_auc = summary_statistics.loc['AUC', 'var']
+    std_auc = summary_statistics.loc['AUC', 'std']
+
+    mean_f1 = summary_statistics.loc['F1 Score', 'mean']
+    var_f1 = summary_statistics.loc['F1 Score', 'var']
+    std_f1 = summary_statistics.loc['F1 Score', 'std']
+
+    # Append to results with extracted summary statistics
+    results.append({
+        "Model": model_name,
+        "Mean Accuracy": mean_accuracy,
+        "Variance Accuracy": var_accuracy,
+        "Std Accuracy": std_accuracy,
+        "Mean AUC": mean_auc,
+        "Variance AUC": var_auc,
+        "Std AUC": std_auc,
+        "Mean F1 Score": mean_f1,
+        "Variance F1 Score": var_f1,
+        "Std F1 Score": std_f1
+    })
 
 def main():
     # 执行加载或更新data
@@ -443,40 +456,112 @@ def main():
     # sex数据清洗
     abalone = data_cleaning(abalone)
 
-
     # Call the function with appropriate paths
     analyze_and_visualize_abalone_data(abalone, qa_1_path)
 
-    print("\nTraining and Evaluating Unpruned Decision Tree:\n")
-    best_unpruned_model, X_train, X_test, y_train, y_test = train_and_evaluate_unpruned_decision_tree(abalone, num_experiments, test_size, random_seed, qa_2_path)
+    results = []
+    best_results = []
 
-    # Train and evaluate Decision Tree models with pruning
-    print("\nTraining and Evaluating Pruned Decision Tree:\n")
-    best_pruned_model, _, _, _, _ = train_and_evaluate_pruned_decision_tree(abalone, num_experiments, test_size, random_seed, qa_2_path)
+    # 运行无剪枝决策树并保存结果
+    unpruned_metrics_df, unpruned_summary, unpruned_best_model, unpruned_best_params, unpruned_best_accuracy, unpruned_best_auc, unpruned_best_f1 = train_and_evaluate_unpruned_decision_tree(
+        abalone, num_experiments, test_size, random_seed, qa_2_path
+    )
+    unpruned_metrics_df.to_csv(f"{qa_2_path}/unpruned_tree_experiment_metrics.csv", index=False)
+    # unpruned_summary.to_csv(f"{qa_2_path}/unpruned_tree_summary_statistics.csv", index=True)
 
-    # Apply Random Forest classifier and evaluate performance
-    print("\nApplying Random Forests and Evaluating Performance:\n")
-    apply_random_forests(abalone, max_num_trees=50, test_size=test_size, random_seed=random_seed, output_dir=qa_2_path)
+    # Assuming metrics_df is calculated for a specific model
+    calculate_and_append_summary(unpruned_summary, results, "Unpruned Decision Tree")
 
-    # Train and evaluate XGBoost model
-    print("\nTraining and Evaluating XGBoost Model:\n")
-    xgb_model = train_and_evaluate_xgboost(abalone, test_size, random_seed, qa_2_path)
+    # 将无剪枝决策树的最佳结果添加到列表中
+    best_results.append({
+        "Model": "Unpruned Decision Tree",
+        "Best Accuracy": unpruned_best_accuracy,
+        "Best AUC": unpruned_best_auc,
+        "Best F1 Score": unpruned_best_f1
+    })
 
-    # Train and evaluate Gradient Boosting model
-    print("\nTraining and Evaluating Gradient Boosting Model:\n")
-    gb_model = train_and_evaluate_gradient_boosting(abalone, test_size, random_seed, qa_2_path)
+    # 运行剪枝决策树并保存结果
+    pruned_metrics_df, pruned_summary, pruned_best_model, pruned_best_params, pruned_best_accuracy, pruned_best_auc, pruned_best_f1 = train_and_evaluate_pruned_decision_tree(
+        abalone, num_experiments, test_size, random_seed, qa_2_path
+    )
+    pruned_metrics_df.to_csv(f"{qa_2_path}/pruned_tree_experiment_metrics.csv", index=False)
+    # pruned_summary.to_csv(f"{qa_2_path}/pruned_tree_summary_statistics.csv", index=True)
 
-    # Train and evaluate Neural Network with Adam optimizer
-    print("\nTraining and Evaluating Neural Network with Adam Optimizer:\n")
-    nn_model_adam = train_and_evaluate_nn_adam(abalone, test_size, random_seed, qa_2_path)
+    # Assuming metrics_df is calculated for a specific model
+    calculate_and_append_summary(pruned_summary, results, "Pruned Decision Tree")
 
-    # Train and evaluate Neural Network with SGD optimizer
-    print("\nTraining and Evaluating Neural Network with SGD Optimizer:\n")
-    nn_model_sgd = train_and_evaluate_nn_sgd(abalone, test_size, random_seed, qa_2_path)
+    # 将剪枝决策树的最佳结果添加到列表中
+    best_results.append({
+        "Model": "Pruned Decision Tree",
+        "Best Accuracy": pruned_best_accuracy,
+        "Best AUC": pruned_best_auc,
+        "Best F1 Score": pruned_best_f1
+    })
 
-    # Compare L2 regularisation (weight decay) with dropouts using Adam optimizer
-    print("\nComparing L2 Regularisation with Dropouts using Adam Optimizer:\n")
-    compare_l2_and_dropout(abalone, test_size, random_seed, qa_2_path)
+
+    # Define models and parameters
+    models = [
+        ("Random Forest", RandomForestClassifier(n_estimators=100, random_state=random_seed)),
+        ("XGBoost", XGBClassifier(eval_metric='mlogloss', random_state=random_seed)),
+        ("Gradient Boosting", GradientBoostingClassifier(random_state=random_seed)),
+        ("Neural Network (Adam)", MLPClassifier(hidden_layer_sizes=(100,), solver='adam', max_iter=500, random_state=random_seed)),
+        ("Neural Network (SGD)", MLPClassifier(hidden_layer_sizes=(100,), solver='sgd', max_iter=500, random_state=random_seed))
+    ]
+
+    for model_name, model in models:
+        (mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc,
+         mean_f1, std_f1, var_f1, best_accuracy, best_auc, best_f1) = train_and_evaluate_model(model, abalone, num_experiments, random_seed)
+
+        results.append({
+            "Model": model_name,
+            "Mean Accuracy": mean_accuracy,
+            "Variance Accuracy": var_accuracy,
+            "Std Accuracy": std_accuracy,
+            "Mean AUC": mean_auc,
+            "Variance AUC": var_auc,
+            "Std AUC": std_auc,
+            "Mean F1 Score": mean_f1,
+            "Variance F1 Score": var_f1,
+            "Std F1 Score": std_f1
+        })
+
+        best_results.append({
+            "Model": model_name,
+            "Best Accuracy": best_accuracy,
+            "Best AUC": best_auc,
+            "Best F1 Score": best_f1
+        })
+
+        print(
+            f"{model_name} - Mean Accuracy: {mean_accuracy:.4f}, Std Accuracy: {std_accuracy:.4f}, Mean AUC: {mean_auc:.4f}, Std AUC: {std_auc:.4f}, Mean F1 Score: {mean_f1:.4f}, Std F1 Score: {std_f1:.4f}")
+        print(f"{model_name} - Best Accuracy: {best_accuracy:.4f}, Best AUC: {best_auc:.4f}, Best F1 Score: {best_f1:.4f}")
+
+    # L2
+    X, y = select_features_and_target(abalone)
+    y = encode_target(y)  # Encode target labels
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
+
+    # L2 vs Dropout comparison with multiple hyperparameter combinations
+    l2_dropout_results = compare_l2_and_dropout(X_train, X_test, y_train, y_test)
+
+    # Append L2 vs Dropout best results for summary
+    l2_best_accuracy = max(l2_dropout_results["L2 Accuracy"].max(), l2_dropout_results["Dropout Accuracy"].max())
+    l2_best_auc = max(l2_dropout_results["L2 AUC"].max(), l2_dropout_results["Dropout AUC"].max())
+    l2_best_f1 = max(l2_dropout_results["L2 F1"].max(), l2_dropout_results["Dropout F1"].max())
+
+    best_results.append({
+        "Model": "L2 vs Dropout",
+        "Best Accuracy": l2_best_accuracy,
+        "Best AUC": l2_best_auc,
+        "Best F1 Score": l2_best_f1
+    })
+
+
+    # Save all results to CSV
+    save_results_to_csv(results, results_file_path)
+    save_results_to_csv(best_results, best_results_file_path)
+    print(f"Mean results saved to {results_file_path}")
+    print(f"Best results saved to {best_results_file_path}")
 
 if __name__ == "__main__":
     main()
