@@ -42,6 +42,8 @@ if ed_state == 0:
 
     if os.path.exists("../out"):
         shutil.rmtree("../out")
+    if os.path.exists("../results"):
+        shutil.rmtree("../results")
     os.makedirs("../out", exist_ok=True)
     os.makedirs("../out/q_a/model_results", exist_ok=True)
     os.makedirs(qa_1_path, exist_ok=True)
@@ -74,7 +76,7 @@ def save_results_to_csv(results, output_file):
     results_df = pd.DataFrame(results)
     results_df.to_csv(output_file, index=False)
 
-def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
+def train_and_evaluate_basic_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
     X, y = select_features_and_target(data)
 
     # Store performance metrics for each experiment
@@ -90,10 +92,10 @@ def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size, 
         # Split the data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + i)
 
-        # Define hyperparameters
-        max_depth = np.random.choice([None, 3, 5, 7, 10 ])
-        min_samples_split = np.random.choice([2, 5, 10])
-        min_samples_leaf = np.random.choice([1, 2, 4])
+        # Define hyperparameters with pre-pruning
+        max_depth = np.random.randint(3, 10)
+        min_samples_split = np.random.randint(2, 10)
+        min_samples_leaf = np.random.randint(1, 5)
 
         # Initialize and train the Decision Tree classifier
         clf = DecisionTreeClassifier(
@@ -141,11 +143,11 @@ def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size, 
         filled=True, rounded=True, special_characters=True
     )
     graph = graphviz.Source(dot_data)
-    graph.render(f"{output_dir}/best_unpruned_tree", format='png', cleanup=True)
+    graph.render(f"{output_dir}/best_basic_tree", format='png', cleanup=True)
 
-    print(f"Best Model Parameters (Unpruned): {best_params}")
-    print(f"Best Model Test Accuracy (Unpruned): {best_accuracy:.4f}")
-    print("IF-THEN rules for the best unpruned decision tree:\n")
+    print(f"Best Model Parameters (Basic with Pre-Pruning): {best_params}")
+    print(f"Best Model Test Accuracy (Basic): {best_accuracy:.4f}")
+    print("IF-THEN rules for the best basic decision tree:\n")
     print(export_text(best_model, feature_names=X.columns))
 
     # Compute summary statistics
@@ -155,7 +157,7 @@ def train_and_evaluate_unpruned_decision_tree(data, num_experiments, test_size, 
     # Return metrics, summary statistics, best model, best parameters, and best scores
     return metrics_df, summary_statistics, best_model, best_params, best_accuracy, best_auc, best_f1
 
-def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
+def train_and_evaluate_pruned_postprocessed_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
     X, y = select_features_and_target(data)
 
     # Store performance metrics for each experiment
@@ -171,12 +173,12 @@ def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, ra
         # Split the data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + i)
 
-        # Define hyperparameters
+        # Define hyperparameters with pre-pruning
         max_depth = np.random.randint(3, 10)
         min_samples_split = np.random.randint(2, 10)
         min_samples_leaf = np.random.randint(1, 5)
 
-        # Initialize and train the Decision Tree classifier with pruning
+        # Initialize and train the Decision Tree classifier
         clf = DecisionTreeClassifier(
             max_depth=max_depth,
             min_samples_split=min_samples_split,
@@ -185,13 +187,33 @@ def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, ra
         )
         clf.fit(X_train, y_train)
 
+        # Post-process pruning using cost complexity pruning
+        path = clf.cost_complexity_pruning_path(X_train, y_train)
+        ccp_alphas = path.ccp_alphas
+        pruned_clf = None
+        best_pruned_score = 0
+
+        for ccp_alpha in ccp_alphas:
+            temp_clf = DecisionTreeClassifier(
+                max_depth=max_depth,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
+                ccp_alpha=ccp_alpha,
+                random_state=random_seed + i
+            )
+            temp_clf.fit(X_train, y_train)
+            temp_score = temp_clf.score(X_test, y_test)
+            if temp_score > best_pruned_score:
+                best_pruned_score = temp_score
+                pruned_clf = temp_clf
+
         # Make predictions
-        y_pred_test = clf.predict(X_test)
+        y_pred_test = pruned_clf.predict(X_test)
 
         # Calculate metrics
         test_accuracy = accuracy_score(y_test, y_pred_test)
         f1 = f1_score(y_test, y_pred_test, average='weighted')
-        auc = roc_auc_score(y_test, clf.predict_proba(X_test), multi_class='ovr')
+        auc = roc_auc_score(y_test, pruned_clf.predict_proba(X_test), multi_class='ovr')
 
         # Store experiment metrics
         experiment_metrics.append({
@@ -209,7 +231,7 @@ def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, ra
             best_accuracy = test_accuracy
             best_auc = auc
             best_f1 = f1
-            best_model = clf
+            best_model = pruned_clf
             best_params = {
                 'max_depth': max_depth,
                 'min_samples_split': min_samples_split,
@@ -222,11 +244,11 @@ def train_and_evaluate_pruned_decision_tree(data, num_experiments, test_size, ra
         filled=True, rounded=True, special_characters=True
     )
     graph = graphviz.Source(dot_data)
-    graph.render(f"{output_dir}/best_pruned_tree", format='png', cleanup=True)
+    graph.render(f"{output_dir}/best_pruned_postprocessed_tree", format='png', cleanup=True)
 
-    print(f"Best Model Parameters (Pruned): {best_params}")
-    print(f"Best Model Test Accuracy (Pruned): {best_accuracy:.4f}")
-    print("IF-THEN rules for the best pruned decision tree:\n")
+    print(f"Best Model Parameters (Pruned and Post-processed): {best_params}")
+    print(f"Best Model Test Accuracy (Pruned and Post-processed): {best_accuracy:.4f}")
+    print("IF-THEN rules for the best pruned and post-processed decision tree:\n")
     print(export_text(best_model, feature_names=X.columns))
 
     # Compute summary statistics
@@ -463,7 +485,7 @@ def main():
     best_results = []
 
     # 运行无剪枝决策树并保存结果
-    unpruned_metrics_df, unpruned_summary, unpruned_best_model, unpruned_best_params, unpruned_best_accuracy, unpruned_best_auc, unpruned_best_f1 = train_and_evaluate_unpruned_decision_tree(
+    unpruned_metrics_df, unpruned_summary, unpruned_best_model, unpruned_best_params, unpruned_best_accuracy, unpruned_best_auc, unpruned_best_f1 = train_and_evaluate_basic_decision_tree(
         abalone, num_experiments, test_size, random_seed, qa_2_path
     )
     unpruned_metrics_df.to_csv(f"{qa_2_path}/unpruned_tree_experiment_metrics.csv", index=False)
@@ -481,7 +503,7 @@ def main():
     })
 
     # 运行剪枝决策树并保存结果
-    pruned_metrics_df, pruned_summary, pruned_best_model, pruned_best_params, pruned_best_accuracy, pruned_best_auc, pruned_best_f1 = train_and_evaluate_pruned_decision_tree(
+    pruned_metrics_df, pruned_summary, pruned_best_model, pruned_best_params, pruned_best_accuracy, pruned_best_auc, pruned_best_f1 = train_and_evaluate_pruned_postprocessed_decision_tree(
         abalone, num_experiments, test_size, random_seed, qa_2_path
     )
     pruned_metrics_df.to_csv(f"{qa_2_path}/pruned_tree_experiment_metrics.csv", index=False)
