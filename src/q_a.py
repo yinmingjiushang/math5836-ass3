@@ -22,6 +22,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 
 
+
 # define
 # =========================
 ed_state = 0
@@ -36,9 +37,11 @@ qa_2_path = "../results/q_a"
 results_file_path = f"{qa_2_path}/model_results.csv"
 best_results_file_path = f"{qa_2_path}/best_model_results.csv"
 
-
 if ed_state == 0:
     import achieve_data
+
+def create_dir():
+
 
     if os.path.exists("../out"):
         shutil.rmtree("../out")
@@ -66,19 +69,76 @@ def encode_target(y):
     }
     return y.map(target_mapping)
 
+def analyze_and_visualize_abalone_data(data, output_dir):
+    # Define age classes based on the rings
+    age_bins = [-1, 7, 10, 15, float('inf')]
+    age_labels = ['Class_1_0_7_years', 'Class_2_8_10_years', 'Class_3_11_15_years', 'Class_4_greater_15_years']
+    data['Age Class'] = pd.cut(data['Rings'], bins=age_bins, labels=age_labels, right=True)
+
+    # Update feature column names to match dataset
+    feature_columns = ['Sex','Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
+
+    # Define the visualization functions
+    def visualize_age_class_distribution(data):
+        plt.figure(figsize=(10, 6))
+        sns.countplot(x='Age Class', data=data, hue='Age Class', palette='viridis', dodge=False)
+        plt.title('Distribution of Age Classes')
+        plt.xlabel('Age Class')
+        plt.ylabel('Count')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(f"{output_dir}/age_class_distribution.png")
+        plt.close()
+
+    def visualize_feature_distribution(data, feature_columns):
+        plt.figure(figsize=(15, 10))
+        data[feature_columns].hist(bins=20, figsize=(15, 10), layout=(3, 3), color='skyblue', edgecolor='black')
+        plt.suptitle('Distribution of Features')
+        plt.tight_layout()
+        plt.savefig(f"{output_dir}/feature_distribution.png")
+        plt.close()
+
+    def visualize_pairplot(data, feature_columns):
+        pairplot_fig = sns.pairplot(data[feature_columns + ['Age Class']], hue='Age Class', palette='husl', plot_kws={'alpha': 0.5})
+        pairplot_fig.fig.tight_layout()
+        pairplot_fig.savefig(f"{output_dir}/pairplot.png")
+        plt.close()
+
+    def visualize_correlation_heatmap(data, feature_columns):
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(data[feature_columns].corr(), annot=True, cmap='coolwarm', linewidths=0.5)
+        plt.title('Correlation Heatmap of Features')
+        plt.tight_layout()
+        plt.savefig(f"{output_dir}/correlation_heatmap.png")
+        plt.close()
+
+    # Call the visualization functions
+    visualize_age_class_distribution(data)
+    visualize_feature_distribution(data, feature_columns)
+    visualize_pairplot(data, feature_columns)
+    visualize_correlation_heatmap(data, feature_columns)
+
+    # Summary statistics for each feature
+    summary_stats = data[feature_columns].describe()
+    print("Summary Statistics for Each Feature:\n", summary_stats)
+
+    # Save the summary statistics as a CSV file
+    summary_stats.to_csv(os.path.join(output_dir, 'summary_statistics.csv'), index=True)
+
 def select_features_and_target(data):
     feature_columns = ['Sex', 'Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
     X = data[feature_columns]
     y = data['Age Class']
+
+    # X = data.iloc[:, :-1]
+    # y = data.iloc[:, -1]
     return X, y
 
 def save_results_to_csv(results, output_file):
     results_df = pd.DataFrame(results)
     results_df.to_csv(output_file, index=False)
 
-def train_and_evaluate_basic_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
+def train_and_evaluate_basic_decision_tree(X, y, num_experiments, test_size, random_seed, output_dir):
     # Store performance metrics for each experiment
     experiment_metrics = []
 
@@ -157,9 +217,7 @@ def train_and_evaluate_basic_decision_tree(data, num_experiments, test_size, ran
     # Return metrics, summary statistics, best model, best parameters, and best scores
     return metrics_df, summary_statistics, best_model, best_params, best_accuracy, best_auc, best_f1
 
-def train_and_evaluate_pruned_postprocessed_decision_tree(data, num_experiments, test_size, random_seed, output_dir):
-    X, y = select_features_and_target(data)
-
+def train_and_evaluate_pruned_postprocessed_decision_tree(X, y, num_experiments, test_size, random_seed, output_dir):
     # Store performance metrics for each experiment
     experiment_metrics = []
 
@@ -258,15 +316,14 @@ def train_and_evaluate_pruned_postprocessed_decision_tree(data, num_experiments,
     # Return metrics, summary statistics, best model, best parameters, and best scores
     return metrics_df, summary_statistics, best_model, best_params, best_accuracy, best_auc, best_f1
 
-def train_and_evaluate_model(model, data, num_experiments, random_seed):
+def train_and_evaluate_model(model, X, y, num_experiments, random_seed):
 
     accuracies, aucs, f1_scores = [], [], []
     best_accuracy, best_auc, best_f1 = 0, 0, 0
 
+
     for i in range(num_experiments):
 
-        X, y = select_features_and_target(data)
-        y = encode_target(y)  # Encode target labels
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=i + random_seed)
 
         model.fit(X_train, y_train)
@@ -304,63 +361,9 @@ def train_and_evaluate_model(model, data, num_experiments, random_seed):
     return (mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc,
             mean_f1, std_f1, var_f1, best_accuracy, best_auc, best_f1)
 
-def analyze_and_visualize_abalone_data(data, output_dir):
-    # Define age classes based on the rings
-    age_bins = [0, 7, 10, 15, float('inf')]
-    age_labels = ['Class_1_0_7_years', 'Class_2_8_10_years', 'Class_3_11_15_years', 'Class_4_greater_15_years']
-    data['Age Class'] = pd.cut(data['Rings'], bins=age_bins, labels=age_labels, right=True)
+def compare_l2_and_dropout(X, y, num_experiments, test_size, random_seed, output_dir):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
 
-    # Update feature column names to match dataset
-    feature_columns = ['Length', 'Diameter', 'Height', 'Whole_weight', 'Shucked_weight', 'Viscera_weight', 'Shell_weight']
-
-    # Define the visualization functions
-    def visualize_age_class_distribution(data):
-        plt.figure(figsize=(10, 6))
-        sns.countplot(x='Age Class', data=data, hue='Age Class', palette='viridis', dodge=False)
-        plt.title('Distribution of Age Classes')
-        plt.xlabel('Age Class')
-        plt.ylabel('Count')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(f"{output_dir}/age_class_distribution.png")
-        plt.close()
-
-    def visualize_feature_distribution(data, feature_columns):
-        plt.figure(figsize=(15, 10))
-        data[feature_columns].hist(bins=20, figsize=(15, 10), layout=(3, 3), color='skyblue', edgecolor='black')
-        plt.suptitle('Distribution of Features')
-        plt.tight_layout()
-        plt.savefig(f"{output_dir}/feature_distribution.png")
-        plt.close()
-
-    def visualize_pairplot(data, feature_columns):
-        pairplot_fig = sns.pairplot(data[feature_columns + ['Age Class']], hue='Age Class', palette='husl', plot_kws={'alpha': 0.5})
-        pairplot_fig.fig.tight_layout()
-        pairplot_fig.savefig(f"{output_dir}/pairplot.png")
-        plt.close()
-
-    def visualize_correlation_heatmap(data, feature_columns):
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(data[feature_columns].corr(), annot=True, cmap='coolwarm', linewidths=0.5)
-        plt.title('Correlation Heatmap of Features')
-        plt.tight_layout()
-        plt.savefig(f"{output_dir}/correlation_heatmap.png")
-        plt.close()
-
-    # Call the visualization functions
-    visualize_age_class_distribution(data)
-    visualize_feature_distribution(data, feature_columns)
-    visualize_pairplot(data, feature_columns)
-    visualize_correlation_heatmap(data, feature_columns)
-
-    # Summary statistics for each feature
-    summary_stats = data[feature_columns].describe()
-    print("Summary Statistics for Each Feature:\n", summary_stats)
-
-    # Save the summary statistics as a CSV file
-    summary_stats.to_csv(os.path.join(output_dir, 'summary_statistics.csv'), index=True)
-
-def compare_l2_and_dropout(X_train, X_test, y_train, y_test):
     y_train = y_train.astype('int')
     y_test = y_test.astype('int')
 
@@ -467,6 +470,7 @@ def calculate_and_append_summary(summary_statistics, results, model_name):
     })
 
 def main():
+    create_dir()
     # 执行加载或更新data
     if ed_state == 0:
         achieve_data.achieve_data_main()
@@ -484,9 +488,13 @@ def main():
     results = []
     best_results = []
 
+    X, y =  select_features_and_target(abalone)
+    y = encode_target(y)  # Encode target labels
+
+
     # 运行无剪枝决策树并保存结果
     unpruned_metrics_df, unpruned_summary, unpruned_best_model, unpruned_best_params, unpruned_best_accuracy, unpruned_best_auc, unpruned_best_f1 = train_and_evaluate_basic_decision_tree(
-        abalone, num_experiments, test_size, random_seed, qa_2_path
+        X, y, num_experiments, test_size, random_seed, qa_2_path
     )
     unpruned_metrics_df.to_csv(f"{qa_2_path}/unpruned_tree_experiment_metrics.csv", index=False)
     # unpruned_summary.to_csv(f"{qa_2_path}/unpruned_tree_summary_statistics.csv", index=True)
@@ -504,7 +512,7 @@ def main():
 
     # 运行剪枝决策树并保存结果
     pruned_metrics_df, pruned_summary, pruned_best_model, pruned_best_params, pruned_best_accuracy, pruned_best_auc, pruned_best_f1 = train_and_evaluate_pruned_postprocessed_decision_tree(
-        abalone, num_experiments, test_size, random_seed, qa_2_path
+        X, y, num_experiments, test_size, random_seed, qa_2_path
     )
     pruned_metrics_df.to_csv(f"{qa_2_path}/pruned_tree_experiment_metrics.csv", index=False)
     # pruned_summary.to_csv(f"{qa_2_path}/pruned_tree_summary_statistics.csv", index=True)
@@ -532,7 +540,7 @@ def main():
 
     for model_name, model in models:
         (mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc,
-         mean_f1, std_f1, var_f1, best_accuracy, best_auc, best_f1) = train_and_evaluate_model(model, abalone, num_experiments, random_seed)
+         mean_f1, std_f1, var_f1, best_accuracy, best_auc, best_f1) = train_and_evaluate_model(model, X, y, num_experiments, random_seed)
 
         results.append({
             "Model": model_name,
@@ -559,12 +567,9 @@ def main():
         print(f"{model_name} - Best Accuracy: {best_accuracy:.4f}, Best AUC: {best_auc:.4f}, Best F1 Score: {best_f1:.4f}")
 
     # L2
-    X, y = select_features_and_target(abalone)
-    y = encode_target(y)  # Encode target labels
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
 
     # L2 vs Dropout comparison with multiple hyperparameter combinations
-    l2_dropout_results = compare_l2_and_dropout(X_train, X_test, y_train, y_test)
+    l2_dropout_results = compare_l2_and_dropout(X, y, num_experiments, test_size, random_seed, qa_2_path)
 
     # Append L2 vs Dropout best results for summary
     l2_best_accuracy = max(l2_dropout_results["L2 Accuracy"].max(), l2_dropout_results["Dropout Accuracy"].max())
