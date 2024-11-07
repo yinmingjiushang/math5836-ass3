@@ -45,3 +45,16 @@ if ed_state == 0:
     os.makedirs(qc_1_path, exist_ok=True)
     os.makedirs(qc_2_path, exist_ok=True)
 
+
+
+
+
+
+
+def main():
+
+
+
+
+if __name__ == "__main__":
+    main()
