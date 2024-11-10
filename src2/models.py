@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 from sklearn.neural_network import MLPClassifier
 import tensorflow as tf
 from tensorflow.keras import layers, models
@@ -106,6 +107,18 @@ def train_and_evaluate_basic_decision_tree(X, y, num_experiments, test_size, ran
     }).sort_values(by='Importance', ascending=False)
     feature_importance_df.to_csv(f"{output_dir}/best_basic_tree_feature_importance.csv", index=False)
     print("Feature importance for the best basic decision tree has been saved to CSV.")
+
+    # 绘制特征重要性柱状图并保存
+    plt.figure(figsize=(10, 6))
+    plt.bar(feature_importance_df['Feature'], feature_importance_df['Importance'], color='skyblue')
+    plt.xticks(rotation=45, ha='right')
+    plt.title('Feature Importance for Basic Decision Tree')
+    plt.xlabel('Feature')
+    plt.ylabel('Importance')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/best_basic_tree_feature_importance.png")
+    plt.close()
+    print("Feature importance bar chart for the best basic decision tree has been saved as an image.")
 
     # Compute summary statistics
     metrics_df = pd.DataFrame(experiment_metrics)
@@ -227,6 +240,18 @@ def train_and_evaluate_pruned_postprocessed_decision_tree(X, y, num_experiments,
     }).sort_values(by='Importance', ascending=False)
     feature_importance_df.to_csv(f"{output_dir}/best_pruned_postprocessed_tree_feature_importance.csv", index=False)
     print("Feature importance for the best pruned and post-processed decision tree has been saved to CSV.")
+
+    # 绘制特征重要性柱状图并保存
+    plt.figure(figsize=(10, 6))
+    plt.bar(feature_importance_df['Feature'], feature_importance_df['Importance'], color='lightcoral')
+    plt.xticks(rotation=45, ha='right')
+    plt.title('Feature Importance for Pruned Post-processed Decision Tree')
+    plt.xlabel('Feature')
+    plt.ylabel('Importance')
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/best_pruned_postprocessed_tree_feature_importance.png")
+    plt.close()
+    print("Feature importance bar chart for the best pruned and post-processed decision tree has been saved as an image.")
 
     # Compute summary statistics
     metrics_df = pd.DataFrame(experiment_metrics)
