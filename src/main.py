@@ -1,22 +1,24 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 
-import data_download,data_input,data_processing,data_visualize,model_sel,models,out_path,results_plot,results_processing
+import data_input,data_processing,data_visualize,model_sel,models,out_path,results_plot,results_processing
 
 
 
 # define
 # =========================
 ed_state = 0
-num_experiments = 5
+num_experiments = 30
 # model train param
 test_size = 0.6
 random_seed = 42
 # =========================
-
+if ed_state == 0:
+    import data_download
 
 
 def data_and_visualize(flag):
@@ -35,6 +37,8 @@ def data_and_visualize(flag):
         y = data_processing.map_values_to_bins(flag, y)
 
     data_visualize.visualize_data(flag, X, y)
+
+    y = LabelEncoder().fit_transform(y)
 
     # handle_imbalance
     X, y, class_weights = data_processing.handle_imbalance(X, y, "weighted")
@@ -71,7 +75,7 @@ def question_a():
         ("Neural Network (SGD)", MLPClassifier)
     ]:
         param_space = models.param_spaces[model_name]
-        best_model, best_params, best_accuracy, mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc, mean_f1, std_f1, var_f1 = models.random_search_and_evaluate_metrics(
+        best_model, best_params, best_accuracy, best_auc, best_f1, mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc, mean_f1, std_f1, var_f1 = models.random_search_and_evaluate_metrics(
             model_name, model_class, param_space, X, y, num_experiments, test_size, random_seed
         )
 
@@ -79,15 +83,20 @@ def question_a():
         results = results_processing.append_mean_statistics(results, model_name, mean_accuracy, var_accuracy, std_accuracy, mean_auc, var_auc, std_auc, mean_f1, var_f1, std_f1)
 
         # Append best results
-        best_results = results_processing.append_best_results(best_results, model_name, best_accuracy, mean_auc, mean_f1)
+        best_results = results_processing.append_best_results(best_results, model_name, best_accuracy, best_auc, best_f1)
 
+    # l2 vs dropout
+    best_params, best_accuracy, best_auc, best_f1, mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc, mean_f1, std_f1, var_f1 = models.compare_l2_and_dropout(X, y,
+                                                                                                                                                                                  num_experiments,
+                                                                                                                                                                                  test_size,
+                                                                                                                                                                                  random_seed,
+                                                                                                                                                                                  out_path.OutPath.results_path(
+                                                                                                                                                                                      flag))
+    # Append mean statistics
+    results = results_processing.append_mean_statistics(results, "L2 vs Dropout", mean_accuracy, var_accuracy, std_accuracy, mean_auc, var_auc, std_auc, mean_f1, var_f1, std_f1)
 
-    # l2
-    l2_results_df = models.compare_l2_and_dropout(X, y, test_size, random_seed, out_path.OutPath.results_path(flag))
-
-    best_results = results_processing.l2_best_results(best_results, l2_results_df)
-
-
+    # Append best results
+    best_results = results_processing.append_best_results(best_results, "L2 vs Dropout", best_accuracy, best_auc, best_f1)
 
     results_processing.save_results_to_csv(results, out_path.OutPath.results_store(flag))
     results_processing.save_results_to_csv(best_results, out_path.OutPath.best_results_store(flag))

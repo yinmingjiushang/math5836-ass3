@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 from sklearn.neural_network import MLPClassifier
 import tensorflow as tf
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers, models, Sequential
 from sklearn.model_selection import train_test_split, ParameterSampler
 from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
@@ -305,6 +305,8 @@ param_spaces = {
 
 def random_search_and_evaluate_metrics(model_name, model_class, param_space, X, y, num_experiments, test_size, random_seed):
     best_accuracy = 0
+    best_auc = 0
+    best_f1 = 0
     best_params = None
     best_model = None
     accuracies = []
@@ -339,11 +341,15 @@ def random_search_and_evaluate_metrics(model_name, model_class, param_space, X, 
         if auc is not None:
             aucs.append(auc)
 
-        # Track the best model and parameters based on accuracy
+        # Track the best model and parameters based on accuracy, AUC, and F1
         if accuracy > best_accuracy:
             best_accuracy = accuracy
             best_params = params
             best_model = model
+        if auc is not None and auc > best_auc:
+            best_auc = auc
+        if f1 > best_f1:
+            best_f1 = f1
 
     # Calculate the mean, standard deviation, and variance for each metric
     mean_accuracy = np.mean(accuracies)
@@ -363,82 +369,104 @@ def random_search_and_evaluate_metrics(model_name, model_class, param_space, X, 
     print(f"Best Hyperparameters for ({model_name}): {best_params}")
     print(f"Best Accuracy ({model_name}): {best_accuracy:.4f}")
     print(f"{model_name} - Mean Accuracy: {mean_accuracy:.4f}, Std: {std_accuracy:.4f}, Variance: {var_accuracy:.4f}")
-    print(f"{model_name} - Mean AUC: {f'{mean_auc:.4f}' if mean_auc is not None else 'N/A'}, "
+    print(f"{model_name} - Best AUC: {best_auc:.4f}, Mean AUC: {f'{mean_auc:.4f}' if mean_auc is not None else 'N/A'}, "
           f"Std: {f'{std_auc:.4f}' if std_auc is not None else 'N/A'}, "
           f"Variance: {f'{var_auc:.4f}' if var_auc is not None else 'N/A'}")
-    print(f"{model_name} - Mean F1: {mean_f1:.4f}, Std: {std_f1:.4f}, Variance: {var_f1:.4f}")
+    print(f"{model_name} - Best F1: {best_f1:.4f}, Mean F1: {mean_f1:.4f}, Std F1: {std_f1:.4f}, Variance: {var_f1:.4f}")
+
+    # Return best and mean statistics including best AUC and best F1
+    return best_model, best_params, best_accuracy, best_auc, best_f1, mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc, mean_f1, std_f1, var_f1
 
 
-    return best_model, best_params, best_accuracy, mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc, mean_f1, std_f1, var_f1
 
 
-def compare_l2_and_dropout(X, y, test_size, random_seed, output_dir):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed)
-    y_train = y_train.astype('int')
-    y_test = y_test.astype('int')
+def compare_l2_and_dropout(X, y,num_experiments, test_size, random_seed, output_dir, ):
+    # 获取数据集的类别数
+    num_classes = len(np.unique(y))
 
-    # Define hyperparameter combinations
+    # 定义超参数组合
     hyperparameter_combinations = [
         {"dropout_rate": 0.2, "weight_decay": 0.01},
         {"dropout_rate": 0.3, "weight_decay": 0.001},
         {"dropout_rate": 0.5, "weight_decay": 0.0001}
     ]
 
-    results = []
-    print("================================================================================")
+    results_summary = []
+    best_params = None
+    best_accuracy = 0
+    best_auc = 0
+    best_f1 = 0
 
-    for i, params in enumerate(hyperparameter_combinations):
-        dropout_rate = params["dropout_rate"]
-        weight_decay = params["weight_decay"]
+    # 重复实验 num_experiments 次
+    for exp_num in range(num_experiments):
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + exp_num)
 
-        # L2 Regularization Model (MLPClassifier with weight decay)
-        l2_model = MLPClassifier(
-            hidden_layer_sizes=(100,),
-            solver='adam',
-            alpha=weight_decay,  # L2 regularization strength
-            max_iter=500,
-            random_state=random_seed
-        )
-        l2_model.fit(X_train, y_train)
-        y_pred_l2 = l2_model.predict(X_test)
-        l2_accuracy = accuracy_score(y_test, y_pred_l2)
-        l2_auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred_l2), multi_class='ovr')
-        l2_f1 = f1_score(y_test, y_pred_l2, average='weighted')
+        for params in hyperparameter_combinations:
+            dropout_rate = params["dropout_rate"]
+            weight_decay = params["weight_decay"]
 
-        # Dropout Model (TensorFlow with dropout layer)
-        dropout_model = tf.keras.Sequential([
-            layers.InputLayer(shape=(X_train.shape[1],)),
-            layers.Dense(100, activation='relu'),
-            layers.Dropout(dropout_rate),  # Apply Dropout
-            layers.Dense(4, activation='softmax')
-        ])
-        dropout_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-        dropout_model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=0)
-        y_pred_dropout = np.argmax(dropout_model.predict(X_test), axis=1)
-        dropout_accuracy = accuracy_score(y_test, y_pred_dropout)
-        dropout_auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred_dropout), multi_class='ovr')
-        dropout_f1 = f1_score(y_test, y_pred_dropout, average='weighted')
+            # L2 Regularization Model
+            l2_model = MLPClassifier(
+                hidden_layer_sizes=(100,),
+                solver='adam',
+                alpha=weight_decay,
+                max_iter=500,
+                random_state=random_seed + exp_num
+            )
+            l2_model.fit(X_train, y_train)
+            y_pred_l2 = l2_model.predict(X_test)
+            l2_accuracy = accuracy_score(y_test, y_pred_l2)
+            l2_auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred_l2), multi_class='ovr')
+            l2_f1 = f1_score(y_test, y_pred_l2, average='weighted')
 
-        # Store results for each combination
-        results.append({
-            "Combination": f"Dropout rate: {dropout_rate}, Weight decay (λ): {weight_decay}",
-            "L2 Accuracy": l2_accuracy, "L2 AUC": l2_auc, "L2 F1": l2_f1,
-            "Dropout Accuracy": dropout_accuracy, "Dropout AUC": dropout_auc, "Dropout F1": dropout_f1
-        })
+            # 更新最佳参数
+            if l2_accuracy > best_accuracy:
+                best_accuracy, best_auc, best_f1 = l2_accuracy, l2_auc, l2_f1
+                best_params = {"model_type": "L2", "dropout_rate": None, "weight_decay": weight_decay}
 
+            # Dropout Model
+            dropout_model = Sequential([
+                layers.InputLayer(shape=(X_train.shape[1],)),
+                layers.Dense(100, activation='relu'),
+                layers.Dropout(dropout_rate),
+                layers.Dense(num_classes, activation='softmax')
+            ])
+            dropout_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+            dropout_model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=0)
+            y_pred_dropout = np.argmax(dropout_model.predict(X_test), axis=1)
+            dropout_accuracy = accuracy_score(y_test, y_pred_dropout)
+            dropout_auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred_dropout), multi_class='ovr')
+            dropout_f1 = f1_score(y_test, y_pred_dropout, average='weighted')
 
-        print(f"Combination {i + 1}: Dropout rate {dropout_rate}, Weight decay {weight_decay}")
-        print(f"L2 Model - Accuracy: {l2_accuracy:.4f}, AUC: {l2_auc:.4f}, F1 Score: {l2_f1:.4f}")
-        print(f"Dropout Model - Accuracy: {dropout_accuracy:.4f}, AUC: {dropout_auc:.4f}, F1 Score: {dropout_f1:.4f}")
+            # 更新最佳参数
+            if dropout_accuracy > best_accuracy:
+                best_accuracy, best_auc, best_f1 = dropout_accuracy, dropout_auc, dropout_f1
+                best_params = {"model_type": "Dropout", "dropout_rate": dropout_rate, "weight_decay": None}
 
-    # Convert to DataFrame and save results
-    results_df = pd.DataFrame(results)
-    results_df.to_csv(f"{output_dir}/l2_vs_dropout_results.csv")
+            # 记录单次实验结果
+            results_summary.append({
+                "L2 Accuracy": l2_accuracy, "L2 AUC": l2_auc, "L2 F1": l2_f1,
+                "Dropout Accuracy": dropout_accuracy, "Dropout AUC": dropout_auc, "Dropout F1": dropout_f1
+            })
+
+    # 计算均值、标准差和方差
+    results_df = pd.DataFrame(results_summary)
+    mean_accuracy = results_df["Dropout Accuracy"].mean()
+    std_accuracy = results_df["Dropout Accuracy"].std()
+    var_accuracy = results_df["Dropout Accuracy"].var()
+    mean_auc = results_df["Dropout AUC"].mean()
+    std_auc = results_df["Dropout AUC"].std()
+    var_auc = results_df["Dropout AUC"].var()
+    mean_f1 = results_df["Dropout F1"].mean()
+    std_f1 = results_df["Dropout F1"].std()
+    var_f1 = results_df["Dropout F1"].var()
+
+    # 保存结果
+    results_df.to_csv(f"{output_dir}/l2_vs_dropout_results.csv", index=False)
     print("L2 vs Dropout comparison results saved to l2_vs_dropout_results.csv")
 
-
-    return results_df
-
+    # 返回所有计算值
+    return best_params, best_accuracy, best_auc, best_f1, mean_accuracy, std_accuracy, var_accuracy, mean_auc, std_auc, var_auc, mean_f1, std_f1, var_f1
 
 
 

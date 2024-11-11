@@ -99,45 +99,44 @@ def l2_best_results(best_results, results_df):
     return best_results
 
 def process_model_sel_results(csv_path):
-    # Load the CSV file
+    # 加载 CSV 文件
     model_results_df = pd.read_csv(csv_path)
 
-    # Lists to store processed results
+    # 列表存储处理后的结果
     results = []
     best_results = []
 
-    # Process each row in the CSV
+    # 遍历 CSV 的每一行
     for _, row in model_results_df.iterrows():
-        # Append mean statistics to results list
+        # 将平均统计附加到 results 列表
         append_mean_statistics(
             results,
-            model_name=row['Model'],
-            mean_accuracy=row['mean_accuracy'],
-            var_accuracy=row['var_accuracy'],
-            std_accuracy=row['std_accuracy'],
-            mean_auc=row['mean_auc'],
-            var_auc=row['var_auc'],
-            std_auc=row['std_auc'],
-            mean_f1=row['mean_f1'],
-            var_f1=row['var_f1'],
-            std_f1=row['std_f1']
+            model_name=row.get('Model', None),
+            mean_accuracy=row.get('Mean Accuracy', None),
+            var_accuracy=row.get('Var Accuracy', None),
+            std_accuracy=row.get('Std Accuracy', None),
+            mean_auc=row.get('Mean AUC', None),
+            var_auc=row.get('Var AUC', None),
+            std_auc=row.get('Std AUC', None),
+            mean_f1=row.get('Mean F1', None),
+            var_f1=row.get('Var F1', None),
+            std_f1=row.get('Std F1', None)
         )
 
-        # Append best results to best_results list
+        # 将最佳结果附加到 best_results 列表
         append_best_results(
             best_results,
-            model_name=row['Model'],
-            best_accuracy=row['best_accuracy'],
-            best_auc=row['mean_auc'],  # Using mean AUC as best AUC placeholder
-            best_f1=row['mean_f1']  # Using mean F1 as best F1 placeholder
+            model_name=row.get('Model', None),
+            best_accuracy=row.get('Best Accuracy', None),
+            best_auc=row.get('Best AUC', None),
+            best_f1=row.get('Best F1', None)
         )
 
-    # Convert lists to DataFrames
+    # 转换为 DataFrame
     results_df = pd.DataFrame(results)
     best_results_df = pd.DataFrame(best_results)
 
     return results_df, best_results_df
-
 
 def save_results_to_csv(results, output_file):
     results_df = pd.DataFrame(results)
