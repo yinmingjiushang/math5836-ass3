@@ -16,9 +16,6 @@ num_experiments = 5
 test_size = 0.6
 random_seed = 42
 # =========================
-# for q_c
-random_selection = False
-specific_data_id = 44405  # 固定数据集 ID，当 random_selection=False 时使用
 
 
 

@@ -1,47 +1,365 @@
 IF-THEN rules for the best basic decision tree:
-|--- Shell_weight <= 0.14
-|   |--- Shell_weight <= 0.11
-|   |   |--- Shell_weight <= 0.06
-|   |   |   |--- Sex <= 1.50
-|   |   |   |   |--- class: 0
-|   |   |   |--- Sex >  1.50
-|   |   |   |   |--- class: 0
-|   |   |--- Shell_weight >  0.06
+|--- Shell_weight <= 0.12
+|   |--- Shell_weight <= 0.08
+|   |   |--- Sex <= 1.50
 |   |   |   |--- Sex <= 0.50
-|   |   |   |   |--- class: 1
+|   |   |   |   |--- class: 0
 |   |   |   |--- Sex >  0.50
+|   |   |   |   |--- Viscera_weight <= 0.06
+|   |   |   |   |   |--- Shell_weight <= 0.04
+|   |   |   |   |   |   |--- Length <= 0.32
+|   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |--- Length >  0.32
+|   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Shell_weight >  0.04
+|   |   |   |   |   |   |--- Shucked_weight <= 0.05
+|   |   |   |   |   |   |   |--- Height <= 0.08
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Height >  0.08
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |--- Shucked_weight >  0.05
+|   |   |   |   |   |   |   |--- Length <= 0.35
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |   |--- Length >  0.35
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |--- Viscera_weight >  0.06
+|   |   |   |   |   |--- Viscera_weight <= 0.06
+|   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Viscera_weight >  0.06
+|   |   |   |   |   |   |--- class: 0
+|   |   |--- Sex >  1.50
+|   |   |   |--- Shell_weight <= 0.04
 |   |   |   |   |--- class: 0
-|   |--- Shell_weight >  0.11
-|   |   |--- Shucked_weight <= 0.16
-|   |   |   |--- Viscera_weight <= 0.06
+|   |   |   |--- Shell_weight >  0.04
+|   |   |   |   |--- Viscera_weight <= 0.05
+|   |   |   |   |   |--- Length <= 0.33
+|   |   |   |   |   |   |--- Length <= 0.30
+|   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Length >  0.30
+|   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Length >  0.33
+|   |   |   |   |   |   |--- Shucked_weight <= 0.07
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.07
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.07
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |--- Shucked_weight >  0.07
+|   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |--- Viscera_weight >  0.05
+|   |   |   |   |   |--- Shucked_weight <= 0.08
+|   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Shucked_weight >  0.08
+|   |   |   |   |   |   |--- class: 0
+|   |--- Shell_weight >  0.08
+|   |   |--- Sex <= 0.50
+|   |   |   |--- Shucked_weight <= 0.17
+|   |   |   |   |--- Whole_weight <= 0.31
+|   |   |   |   |   |--- Diameter <= 0.30
+|   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |--- Diameter >  0.30
+|   |   |   |   |   |   |--- class: 2
+|   |   |   |   |--- Whole_weight >  0.31
+|   |   |   |   |   |--- Whole_weight <= 0.33
+|   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |--- Whole_weight >  0.33
+|   |   |   |   |   |   |--- class: 1
+|   |   |   |--- Shucked_weight >  0.17
 |   |   |   |   |--- class: 0
-|   |   |   |--- Viscera_weight >  0.06
-|   |   |   |   |--- class: 1
-|   |   |--- Shucked_weight >  0.16
-|   |   |   |--- Viscera_weight <= 0.13
-|   |   |   |   |--- class: 0
-|   |   |   |--- Viscera_weight >  0.13
-|   |   |   |   |--- class: 1
-|--- Shell_weight >  0.14
-|   |--- Shell_weight <= 0.34
-|   |   |--- Shucked_weight <= 0.40
-|   |   |   |--- Shell_weight <= 0.26
-|   |   |   |   |--- class: 1
-|   |   |   |--- Shell_weight >  0.26
-|   |   |   |   |--- class: 3
-|   |   |--- Shucked_weight >  0.40
-|   |   |   |--- Shell_weight <= 0.28
-|   |   |   |   |--- class: 1
-|   |   |   |--- Shell_weight >  0.28
-|   |   |   |   |--- class: 1
-|   |--- Shell_weight >  0.34
-|   |   |--- Shucked_weight <= 0.65
+|   |   |--- Sex >  0.50
+|   |   |   |--- Sex <= 1.50
+|   |   |   |   |--- Length <= 0.45
+|   |   |   |   |   |--- Height <= 0.10
+|   |   |   |   |   |   |--- Shell_weight <= 0.11
+|   |   |   |   |   |   |   |--- Whole_weight <= 0.25
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |   |--- Whole_weight >  0.25
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |--- Shell_weight >  0.11
+|   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Height >  0.10
+|   |   |   |   |   |   |--- Whole_weight <= 0.30
+|   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Whole_weight >  0.30
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.16
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.16
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |--- Length >  0.45
+|   |   |   |   |   |--- Shucked_weight <= 0.19
+|   |   |   |   |   |   |--- Length <= 0.46
+|   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Length >  0.46
+|   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Shucked_weight >  0.19
+|   |   |   |   |   |   |--- Viscera_weight <= 0.12
+|   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |--- Viscera_weight >  0.12
+|   |   |   |   |   |   |   |--- class: 2
+|   |   |   |--- Sex >  1.50
+|   |   |   |   |--- Shucked_weight <= 0.15
+|   |   |   |   |   |--- Length <= 0.35
+|   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Length >  0.35
+|   |   |   |   |   |   |--- Diameter <= 0.31
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.07
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.07
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Diameter >  0.31
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.13
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.13
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |--- Shucked_weight >  0.15
+|   |   |   |   |   |--- Diameter <= 0.35
+|   |   |   |   |   |   |--- Shell_weight <= 0.11
+|   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |--- Shell_weight >  0.11
+|   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Diameter >  0.35
+|   |   |   |   |   |   |--- class: 1
+|--- Shell_weight >  0.12
+|   |--- Shell_weight <= 0.33
+|   |   |--- Shell_weight <= 0.20
+|   |   |   |--- Shucked_weight <= 0.12
+|   |   |   |   |--- Whole_weight <= 0.33
+|   |   |   |   |   |--- class: 1
+|   |   |   |   |--- Whole_weight >  0.33
+|   |   |   |   |   |--- class: 3
+|   |   |   |--- Shucked_weight >  0.12
+|   |   |   |   |--- Length <= 0.41
+|   |   |   |   |   |--- Shell_weight <= 0.14
+|   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Shell_weight >  0.14
+|   |   |   |   |   |   |--- class: 0
+|   |   |   |   |--- Length >  0.41
+|   |   |   |   |   |--- Sex <= 0.50
+|   |   |   |   |   |   |--- Shucked_weight <= 0.27
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.12
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.12
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Shucked_weight >  0.27
+|   |   |   |   |   |   |   |--- Shell_weight <= 0.16
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |   |   |--- Shell_weight >  0.16
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |--- Sex >  0.50
+|   |   |   |   |   |   |--- Height <= 0.14
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.07
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.07
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Height >  0.14
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.30
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.30
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |--- Shell_weight >  0.20
+|   |   |   |--- Shucked_weight <= 0.46
+|   |   |   |   |--- Shell_weight <= 0.25
+|   |   |   |   |   |--- Shucked_weight <= 0.29
+|   |   |   |   |   |   |--- Shucked_weight <= 0.24
+|   |   |   |   |   |   |   |--- Sex <= 0.50
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Sex >  0.50
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Shucked_weight >  0.24
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.26
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.26
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Shucked_weight >  0.29
+|   |   |   |   |   |   |--- Height <= 0.17
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.37
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.37
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Height >  0.17
+|   |   |   |   |   |   |   |--- Length <= 0.54
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Length >  0.54
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |--- Shell_weight >  0.25
+|   |   |   |   |   |--- Length <= 0.58
+|   |   |   |   |   |   |--- Whole_weight <= 0.90
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.14
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.14
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Whole_weight >  0.90
+|   |   |   |   |   |   |   |--- Sex <= 0.50
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Sex >  0.50
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |--- Length >  0.58
+|   |   |   |   |   |   |--- Whole_weight <= 0.95
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.18
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.18
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Whole_weight >  0.95
+|   |   |   |   |   |   |   |--- Height <= 0.13
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Height >  0.13
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |--- Shucked_weight >  0.46
+|   |   |   |   |--- Shell_weight <= 0.29
+|   |   |   |   |   |--- Viscera_weight <= 0.29
+|   |   |   |   |   |   |--- Sex <= 1.50
+|   |   |   |   |   |   |   |--- Length <= 0.59
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Length >  0.59
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Sex >  1.50
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.70
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.70
+|   |   |   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Viscera_weight >  0.29
+|   |   |   |   |   |   |--- Shell_weight <= 0.29
+|   |   |   |   |   |   |   |--- Length <= 0.61
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Length >  0.61
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Shell_weight >  0.29
+|   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |--- Shell_weight >  0.29
+|   |   |   |   |   |--- Shell_weight <= 0.30
+|   |   |   |   |   |   |--- Whole_weight <= 1.10
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.23
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.23
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |--- Whole_weight >  1.10
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.32
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.32
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Shell_weight >  0.30
+|   |   |   |   |   |   |--- Height <= 0.18
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.55
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.55
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Height >  0.18
+|   |   |   |   |   |   |   |--- Shell_weight <= 0.32
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Shell_weight >  0.32
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |--- Shell_weight >  0.33
+|   |   |--- Shucked_weight <= 0.60
 |   |   |   |--- Shell_weight <= 0.41
-|   |   |   |   |--- class: 3
+|   |   |   |   |--- Length <= 0.57
+|   |   |   |   |   |--- Diameter <= 0.40
+|   |   |   |   |   |   |--- class: 0
+|   |   |   |   |   |--- Diameter >  0.40
+|   |   |   |   |   |   |--- Height <= 0.15
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |--- Height >  0.15
+|   |   |   |   |   |   |   |--- Whole_weight <= 0.97
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Whole_weight >  0.97
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |--- Length >  0.57
+|   |   |   |   |   |--- Whole_weight <= 1.32
+|   |   |   |   |   |   |--- Shell_weight <= 0.35
+|   |   |   |   |   |   |   |--- Diameter <= 0.44
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Diameter >  0.44
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Shell_weight >  0.35
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.48
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.48
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Whole_weight >  1.32
+|   |   |   |   |   |   |--- Viscera_weight <= 0.36
+|   |   |   |   |   |   |   |--- Whole_weight <= 1.44
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Whole_weight >  1.44
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |--- Viscera_weight >  0.36
+|   |   |   |   |   |   |   |--- Sex <= 1.00
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Sex >  1.00
+|   |   |   |   |   |   |   |   |--- class: 2
 |   |   |   |--- Shell_weight >  0.41
-|   |   |   |   |--- class: 3
-|   |   |--- Shucked_weight >  0.65
-|   |   |   |--- Shell_weight <= 0.66
-|   |   |   |   |--- class: 2
-|   |   |   |--- Shell_weight >  0.66
-|   |   |   |   |--- class: 3
+|   |   |   |   |--- Viscera_weight <= 0.35
+|   |   |   |   |   |--- Whole_weight <= 1.36
+|   |   |   |   |   |   |--- Height <= 0.19
+|   |   |   |   |   |   |   |--- Shell_weight <= 0.50
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Shell_weight >  0.50
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Height >  0.19
+|   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Whole_weight >  1.36
+|   |   |   |   |   |   |--- Shucked_weight <= 0.58
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |--- Shucked_weight >  0.58
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |--- Viscera_weight >  0.35
+|   |   |   |   |   |--- Height <= 0.19
+|   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Height >  0.19
+|   |   |   |   |   |   |--- Shell_weight <= 0.56
+|   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Shell_weight >  0.56
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |--- Shucked_weight >  0.60
+|   |   |   |--- Whole_weight <= 1.72
+|   |   |   |   |--- Length <= 0.62
+|   |   |   |   |   |--- class: 1
+|   |   |   |   |--- Length >  0.62
+|   |   |   |   |   |--- Shell_weight <= 0.44
+|   |   |   |   |   |   |--- Length <= 0.68
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.62
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.62
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Length >  0.68
+|   |   |   |   |   |   |   |--- Viscera_weight <= 0.41
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Viscera_weight >  0.41
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Shell_weight >  0.44
+|   |   |   |   |   |   |--- Length <= 0.64
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |--- Length >  0.64
+|   |   |   |   |   |   |   |--- Shell_weight <= 0.47
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Shell_weight >  0.47
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |--- Whole_weight >  1.72
+|   |   |   |   |--- Shucked_weight <= 0.75
+|   |   |   |   |   |--- Diameter <= 0.54
+|   |   |   |   |   |   |--- Viscera_weight <= 0.38
+|   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Viscera_weight >  0.38
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |--- Diameter >  0.54
+|   |   |   |   |   |   |--- Shucked_weight <= 0.71
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |--- Shucked_weight >  0.71
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.72
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.72
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |--- Shucked_weight >  0.75
+|   |   |   |   |   |--- Height <= 0.23
+|   |   |   |   |   |   |--- Height <= 0.19
+|   |   |   |   |   |   |   |--- Shucked_weight <= 0.84
+|   |   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |   |--- Shucked_weight >  0.84
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |   |--- Height >  0.19
+|   |   |   |   |   |   |   |--- Shell_weight <= 0.45
+|   |   |   |   |   |   |   |   |--- class: 1
+|   |   |   |   |   |   |   |--- Shell_weight >  0.45
+|   |   |   |   |   |   |   |   |--- class: 2
+|   |   |   |   |   |--- Height >  0.23
+|   |   |   |   |   |   |--- Diameter <= 0.58
+|   |   |   |   |   |   |   |--- class: 3
+|   |   |   |   |   |   |--- Diameter >  0.58
+|   |   |   |   |   |   |   |--- class: 1
