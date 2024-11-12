@@ -3,14 +3,16 @@ group work by carol, hutton, mingyin
 
 ## run
 environment:
-
+```bash
 python3 src/set_up.py
+```
 
 run:
-
+```bash
 way1: python3 src/main.py
 
 way2: sh run.sh
+```
 
 
 
@@ -93,3 +95,4 @@ way2: sh run.sh
     ├── results_processing.py       # Processes results for statistical summaries
     └── set_up.py                   # Sets up the project directory structure
 ```
+
