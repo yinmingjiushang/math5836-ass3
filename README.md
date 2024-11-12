@@ -14,6 +14,75 @@ way1: python3 src/main.py
 way2: sh run.sh
 ```
 
+## Project Overview
+
+### Part A: Abalone Age Prediction
+
+1. **Dataset**  
+   - **Objective**: Predict the age of abalone by classifying them into age groups based on ring counts.
+   - **Age Groups**:
+     - **Class 1:** 0-7 years
+     - **Class 2:** 8-10 years
+     - **Class 3:** 11-15 years
+     - **Class 4:** Greater than 15 years  
+   - **Source**: [Abalone Dataset](http://archive.ics.uci.edu/ml/datasets/Abalone)
+
+2. **Data Analysis and Visualization**
+   - Visualize the distribution of classes and features.
+   - Generate additional plots to uncover insights and patterns.
+
+3. **Modeling with Decision Tree**
+   - Build a Decision Tree model for multiclass classification.
+   - Perform multiple experiments (5 or more) with different hyperparameters (e.g., tree depth) to assess performance.
+   - Select the best model and provide a visualization of the decision tree.
+   - Translate selected nodes and leaves into "IF-THEN" rules for interpretability.
+   - Explore pre-pruning and post-pruning techniques to improve model performance ([Scikit-Learn Pruning Example](https://scikit-learn.org/stable/auto_examples/tree/plot_cost_complexity_pruning.html)).
+
+4. **Random Forest Model**
+   - Apply Random Forests and observe how increasing the number of trees affects performance.
+
+5. **Comparison with XGBoost and Gradient Boosting**
+   - Compare the performance of Decision Tree, Random Forest, XGBoost, and Gradient Boosting models.
+   - Discuss results using relevant metrics such as accuracy, AUC, or F1 score.
+
+6. **Comparison with Simple Neural Networks**
+   - Implement neural networks using Adam or SGD optimizers with default hyperparameters.
+   - Compare their performance with the tree-based models.
+   - Experiment with different configurations of L2 regularization (weight decay) and dropout rates using Adam optimizer.
+   - Present results for at least 3 different hyperparameter combinations.
+
+### Part B: Contraceptive Method Choice Classification
+
+1. **Dataset**  
+   - **Objective**: Classify contraceptive method choices based on survey data.
+   - **Details**:
+     - **Number of Instances**: 1,473
+     - **Number of Attributes**: 10 (including the class attribute)
+   - **Source**: [Contraceptive Method Choice Dataset](https://archive.ics.uci.edu/dataset/30/contraceptive+method+choice)
+
+2. **Data Preprocessing and Visualization**
+   - Clean the dataset by handling special characters (e.g., `?` and `$`).
+   - Visualize data distributions and identify any patterns.
+
+3. **Model Application**
+   - Apply the two best-performing models from Part A to this dataset.
+   - Report results using appropriate metrics such as F1 score or ROC-AUC.
+
+### Part C: Additional Dataset Analysis
+
+1. **Dataset**  
+   - **Objective**: Choose and analyze a dataset from the UCI Machine Learning Repository.
+   - **Task**: Perform multiclass classification or regression, depending on the dataset selected.
+
+2. **Visualization and Model Building**
+   - Conduct data visualization to understand the dataset.
+   - Build suitable models and report error metrics for both training and test sets.
+
+### Additional Task: Addressing Class Imbalance
+
+- **SMOTE**  
+  - Utilize SMOTE (Synthetic Minority Over-sampling Technique) to address class imbalance in any of the datasets.
+  - Analyze and report the impact on model performance.
 
 
 ## project structure
