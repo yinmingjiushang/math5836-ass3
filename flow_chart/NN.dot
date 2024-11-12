@@ -1,0 +1,26 @@
+digraph NN {
+    rankdir=TB;
+    node [shape=rect, style="rounded,filled", color=black, fillcolor=white];
+
+    Start [label="Start"];
+    LoadData [label="Load and Preprocess Data"];
+    DefineNetwork [label="Define Network Architecture\nand Initialize Weights and Biases"];
+    ForEachEpoch [label="For each Epoch"];
+    TrainingStep [label="Training Step (Forward + Backward Propagation)"];
+    CalculateLoss [label="Calculate Loss"];
+    UpdateWeights [label="Update Weights and Biases"];
+    ConvergenceCheck [label="Convergence Check\n(Loss Change < Threshold)", shape=diamond];
+    EvaluatePerformance [label="Evaluate Model Performance"];
+    End [label="End"];
+
+    Start -> LoadData;
+    LoadData -> DefineNetwork;
+    DefineNetwork -> ForEachEpoch;
+    ForEachEpoch -> TrainingStep;
+    TrainingStep -> CalculateLoss;
+    CalculateLoss -> UpdateWeights;
+    UpdateWeights -> ConvergenceCheck;
+    ConvergenceCheck -> EvaluatePerformance [label="Yes"];
+    EvaluatePerformance -> End;
+    ConvergenceCheck -> ForEachEpoch [label="No"];
+}

@@ -1,0 +1,40 @@
+digraph "L2 & Dropout" {
+    rankdir=TB;
+    node [shape=rect, style="rounded,filled", color=black, fillcolor=white];
+
+    Start [label="Start"];
+    InitializeParams [label="Initialization Parameters\n(X_train, X_test, y_train, y_test)"];
+    ConvertData [label="Convert y_train and y_test to int"];
+    DefineHyperparams [label="Define Hyperparameter\nCombinations"];
+    ForEachCombination [label="For each Hyperparameter\nCombination"];
+    L2Model [label="L2 Regularization Model"];
+    DropoutModel [label="Dropout Model"];
+    DefineL2 [label="Define L2 Model with Weight Decay"];
+    DefineDropout [label="Define Dropout Model with Dropout Rate"];
+    TrainL2 [label="Train L2 Model"];
+    TrainDropout [label="Train Dropout Model"];
+    EvaluateL2 [label="Evaluate Model on Validation Set"];
+    EvaluateDropout [label="Evaluate Model on Validation Set"];
+    PredictL2 [label="Predict and Calculate L2 Metrics"];
+    PredictDropout [label="Predict and Calculate Dropout Metrics"];
+    StoreResults [label="Store Metrics for Each\nHyperparameter Combination"];
+    End [label="End"];
+
+    Start -> InitializeParams;
+    InitializeParams -> ConvertData;
+    ConvertData -> DefineHyperparams;
+    DefineHyperparams -> ForEachCombination;
+    ForEachCombination -> L2Model;
+    ForEachCombination -> DropoutModel;
+    L2Model -> DefineL2;
+    DropoutModel -> DefineDropout;
+    DefineL2 -> TrainL2;
+    DefineDropout -> TrainDropout;
+    TrainL2 -> EvaluateL2;
+    TrainDropout -> EvaluateDropout;
+    EvaluateL2 -> PredictL2;
+    EvaluateDropout -> PredictDropout;
+    PredictL2 -> StoreResults;
+    PredictDropout -> StoreResults;
+    StoreResults -> End;
+}

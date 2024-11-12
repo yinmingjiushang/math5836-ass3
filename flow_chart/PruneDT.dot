@@ -1,0 +1,28 @@
+digraph "Prune DT" {
+    rankdir=TB;
+    node [shape=rect, style="rounded,filled", color=black, fillcolor=white];
+
+    Start [label="Start"];
+    FeatureSelection [label="Feature Selection"];
+    InitializeParams [label="Initialization Parameters\n(data, num_experiments, test_size,\nrandom_seed, output_dir)"];
+    DataSplitting [label="Data Splitting"];
+    SetPrePruning [label="Define Pre-Pruning Criteria\n(e.g., max depth)"];
+    ForEachTree [label="For each Decision Tree"];
+    ModelTraining [label="Model Training"];
+    PostPruning [label="Post-pruning"];
+    CheckAccuracy [label="Current Accuracy > Best Accuracy", shape=diamond];
+    BestTree [label="Best Decision Tree"];
+    End [label="End"];
+
+    Start -> FeatureSelection;
+    FeatureSelection -> InitializeParams;
+    InitializeParams -> DataSplitting;
+    DataSplitting -> SetPrePruning;
+    SetPrePruning -> ForEachTree;
+    ForEachTree -> ModelTraining;
+    ModelTraining -> PostPruning;
+    PostPruning -> CheckAccuracy;
+    CheckAccuracy -> BestTree [label="Yes"];
+    BestTree -> End;
+    CheckAccuracy -> ForEachTree [label="No"];
+}

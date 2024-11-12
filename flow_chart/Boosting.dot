@@ -1,0 +1,32 @@
+digraph Boosting {
+    rankdir=TB;
+    node [shape=rect, style="rounded,filled", color=black, fillcolor=white];
+
+    Start [label="Start"];
+    LoadData [label="Load and Preprocess Data"];
+    SplitData [label="Split Data (Train/Test)"];
+    InitializeParams [label="Initialize XGBoost Parameters"];
+    ForEachRound [label="For each round"];
+    TrainTree [label="Train Tree on Gradient"];
+    CalculateResiduals [label="Calculate Residuals or Gradient"];
+    UpdateGradient [label="Update Gradient"];
+    AdjustLearningRate [label="Adjust Model with Learning Rate"];
+    UpdateWeights [label="Update Weights and Biases"];
+    EarlyStoppingCheck [label="Early Stopping Check", shape=diamond];
+    EvaluatePerformance [label="Evaluate Model Performance"];
+    End [label="End"];
+
+    Start -> LoadData;
+    LoadData -> SplitData;
+    SplitData -> InitializeParams;
+    InitializeParams -> ForEachRound;
+    ForEachRound -> TrainTree;
+    TrainTree -> CalculateResiduals;
+    CalculateResiduals -> UpdateGradient;
+    UpdateGradient -> AdjustLearningRate;
+    AdjustLearningRate -> UpdateWeights;
+    UpdateWeights -> EarlyStoppingCheck;
+    EarlyStoppingCheck -> EvaluatePerformance [label="Yes"];
+    EvaluatePerformance -> End;
+    EarlyStoppingCheck -> ForEachRound [label="No"];
+}

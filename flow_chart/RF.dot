@@ -1,0 +1,26 @@
+digraph RF {
+    rankdir=TB;
+    node [shape=rect, style="rounded,filled", color=black, fillcolor=white];
+
+    Start [label="Start"];
+    LoadData [label="Load and Preprocess Data"];
+    SplitData [label="Split Data (Train/Test)"];
+    ForEachTree [label="For each Tree in Forest"];
+    BootstrapSample [label="Sample Data with Replacement"];
+    TrainDecisionTree [label="Train Decision Tree on Sample"];
+    CalculateMetrics [label="Evaluate Tree Performance\n(accuracy, AUC, F1)"];
+    CheckAccuracy [label="Current Accuracy > Best Accuracy", shape=diamond];
+    BestForest [label="Best Random Forest"];
+    End [label="End"];
+
+    Start -> LoadData;
+    LoadData -> SplitData;
+    SplitData -> ForEachTree;
+    ForEachTree -> BootstrapSample;
+    BootstrapSample -> TrainDecisionTree;
+    TrainDecisionTree -> CalculateMetrics;
+    CalculateMetrics -> CheckAccuracy;
+    CheckAccuracy -> BestForest [label="Yes"];
+    BestForest -> End;
+    CheckAccuracy -> ForEachTree [label="No"];
+}
