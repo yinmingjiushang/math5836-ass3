@@ -161,7 +161,8 @@ def question_c():
 def main():
 
     # mkdir path
-    out_path.create_path()
+    if ed_state == 0:
+        out_path.create_path()
 
     # q_a
     print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
