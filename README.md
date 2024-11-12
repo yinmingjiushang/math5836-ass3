@@ -3,9 +3,11 @@ group work by carol, hutton, mingyin
 
 ## run
 environment:
+
 python3 src/set_up.py
 
 run:
+
 way1: python3 src/main.py
 
 way2: sh run.sh
