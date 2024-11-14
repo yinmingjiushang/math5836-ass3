@@ -1,0 +1,110 @@
+.
+├── README.md
+├── data
+│   ├── q_a
+│   │   ├── q_a_data_X.csv
+│   │   └── q_a_data_y.csv
+│   ├── q_b
+│   │   ├── q_b_data_X.csv
+│   │   └── q_b_data_y.csv
+│   └── q_c
+│       ├── q_c_data_X.csv
+│       └── q_c_data_y.csv
+├── flow_chart
+│   ├── Boosting.dot
+│   ├── L2_Dropout.dot
+│   ├── NN.dot
+│   ├── PruneDT.dot
+│   ├── RF.dot
+│   ├── flow_chart.py
+│   └── out
+│       ├── Boosting.png
+│       ├── L2_Dropout.png
+│       ├── NN.png
+│       ├── PruneDT.png
+│       └── RF.png
+├── full_directory_structure.txt
+├── out
+│   ├── q_a
+│   │   ├── analysis
+│   │   │   ├── average_performance.png
+│   │   │   ├── best_model_results.png
+│   │   │   └── stability.png
+│   │   └── visualizations
+│   │       ├── correlation_heatmap.png
+│   │       ├── feature_distribution.png
+│   │       ├── pairplot.png
+│   │       ├── summary_statistics.csv
+│   │       └── target_distribution.png
+│   ├── q_b
+│   │   ├── analysis
+│   │   │   ├── average_performance.png
+│   │   │   ├── best_model_results.png
+│   │   │   └── stability.png
+│   │   └── visualizations
+│   │       ├── correlation_heatmap.png
+│   │       ├── feature_distribution.png
+│   │       ├── pairplot.png
+│   │       ├── summary_statistics.csv
+│   │       └── target_distribution.png
+│   └── q_c
+│       ├── analysis
+│       │   ├── average_performance.png
+│       │   ├── best_model_results.png
+│       │   └── stability.png
+│       └── visualizations
+│           ├── correlation_heatmap.png
+│           ├── feature_distribution.png
+│           ├── pairplot.png
+│           ├── summary_statistics.csv
+│           └── target_distribution.png
+├── q_a_print_eg.txt
+├── q_b_print_eg.txt
+├── q_c_print_eg.txt
+├── results
+│   ├── q_a
+│   │   ├── basic_tree_prepruned_experiment_metrics.csv
+│   │   ├── basic_tree_prepruned_summary_statistics.csv
+│   │   ├── best_basic_tree.png
+│   │   ├── best_basic_tree_feature_importance.csv
+│   │   ├── best_basic_tree_feature_importance.png
+│   │   ├── best_basic_tree_rules.txt
+│   │   ├── best_pruned_postprocessed_tree.png
+│   │   ├── best_pruned_postprocessed_tree_feature_importance.csv
+│   │   ├── best_pruned_postprocessed_tree_feature_importance.png
+│   │   ├── best_pruned_postprocessed_tree_rules.txt
+│   │   ├── best_results.csv
+│   │   ├── l2_vs_dropout_results.csv
+│   │   ├── model_sel.csv
+│   │   ├── postpruned_tree_experiment_metrics.csv
+│   │   ├── postpruned_tree_summary_statistics.csv
+│   │   └── results.csv
+│   ├── q_b
+│   │   ├── best_results.csv
+│   │   ├── l2_vs_dropout_results.csv
+│   │   ├── model_sel_results.csv
+│   │   └── results.csv
+│   └── q_c
+│       ├── best_results.csv
+│       ├── l2_vs_dropout_results.csv
+│       ├── model_sel_results.csv
+│       └── results.csv
+├── run.sh
+└── src
+    ├── data_download.py
+    ├── data_input.py
+    ├── data_processing.py
+    ├── data_visualize.py
+    ├── main.py
+    ├── model_sel.py
+    ├── models.py
+    ├── out_path.py
+    ├── q_a.py
+    ├── q_b.py
+    ├── q_c.py
+    ├── requirements.txt
+    ├── results_plot.py
+    ├── results_processing.py
+    └── set_up.py
+
+22 directories, 86 files

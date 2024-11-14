@@ -167,3 +167,7 @@ tips: way2 is used to run on ed because the memory on ed is small
     └── set_up.py                   # Sets up the project directory structure
 ```
 
+## notice
+
+
+
