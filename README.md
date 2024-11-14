@@ -168,6 +168,7 @@ tips: way2 is used to run on ed because the memory on ed is small
 ```
 
 ## notice
-
+1. Running the three datasets on ed results in a “kill” situation, mostly occurring during part c. Apologies for not being able to fully debug it on ed.
+2. I recorded the terminal output and logs from local runs in `results_local_eg` as a reference.
 
 
