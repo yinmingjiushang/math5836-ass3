@@ -11,7 +11,7 @@ import data_input,data_processing,data_visualize,model_sel,models,out_path,resul
 
 # define
 # =========================
-ed_state = 0
+ed_state = 0     # 0 == local  ,  1 == ed
 num_experiments = 30
 # model train param
 test_size = 0.6

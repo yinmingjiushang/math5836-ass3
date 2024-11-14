@@ -9,11 +9,12 @@ python3 src/set_up.py
 
 run:
 ```bash
-way1: python3 src/main.py
+on local (Remove the comments within the main() function.):
+python3 src/main.py
 
-way2: sh run.sh
+on ED:
+sh run.sh
 
-tips: way2 is used to run on ed because the memory on ed is small 
 ```
 
 ## Project Overview
