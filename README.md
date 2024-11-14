@@ -10,6 +10,7 @@ python3 src/set_up.py
 run:
 ```bash
 on local (Remove the comments within the main() function.):
+cd src
 python3 src/main.py
 
 on ED:
