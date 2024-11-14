@@ -12,6 +12,8 @@ run:
 way1: python3 src/main.py
 
 way2: sh run.sh
+
+tips: way2 is used to run on ed because the memory on ed is small 
 ```
 
 ## Project Overview
