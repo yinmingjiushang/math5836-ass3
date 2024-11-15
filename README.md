@@ -172,5 +172,6 @@ sh run.sh
 ## notice
 1. Running the three datasets on ed results in a “kill” situation, mostly occurring during part c. Apologies for not being able to fully debug it on ed.
 2. I recorded the terminal output and logs from local runs in `results_local_eg` as a reference.
+3. pictures are in results_local_eg/picture
 
 
