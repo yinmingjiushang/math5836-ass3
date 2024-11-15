@@ -8,15 +8,15 @@ IF-THEN rules for the best basic decision tree:
 |   |   |   |   |--- Viscera_weight >  0.06
 |   |   |   |   |   |--- class: 0
 |   |   |   |--- Diameter >  0.28
-|   |   |   |   |--- Length <= 0.36
+|   |   |   |   |--- Length <= 0.37
 |   |   |   |   |   |--- class: 0
-|   |   |   |   |--- Length >  0.36
+|   |   |   |   |--- Length >  0.37
 |   |   |   |   |   |--- class: 0
 |   |   |--- Sex >  1.50
 |   |   |   |--- Diameter <= 0.24
-|   |   |   |   |--- Shell_weight <= 0.05
+|   |   |   |   |--- Viscera_weight <= 0.04
 |   |   |   |   |   |--- class: 0
-|   |   |   |   |--- Shell_weight >  0.05
+|   |   |   |   |--- Viscera_weight >  0.04
 |   |   |   |   |   |--- class: 0
 |   |   |   |--- Diameter >  0.24
 |   |   |   |   |--- Shell_weight <= 0.07
@@ -26,19 +26,16 @@ IF-THEN rules for the best basic decision tree:
 |   |--- Height >  0.10
 |   |   |--- Sex <= 0.50
 |   |   |   |--- Length <= 0.39
-|   |   |   |   |--- Viscera_weight <= 0.07
-|   |   |   |   |   |--- class: 1
-|   |   |   |   |--- Viscera_weight >  0.07
-|   |   |   |   |   |--- class: 0
+|   |   |   |   |--- class: 0
 |   |   |   |--- Length >  0.39
-|   |   |   |   |--- Shell_weight <= 0.10
+|   |   |   |   |--- Length <= 0.41
 |   |   |   |   |   |--- class: 2
-|   |   |   |   |--- Shell_weight >  0.10
+|   |   |   |   |--- Length >  0.41
 |   |   |   |   |   |--- class: 1
 |   |   |--- Sex >  0.50
-|   |   |   |--- Shell_weight <= 0.08
+|   |   |   |--- Whole_weight <= 0.30
 |   |   |   |   |--- class: 1
-|   |   |   |--- Shell_weight >  0.08
+|   |   |   |--- Whole_weight >  0.30
 |   |   |   |   |--- Viscera_weight <= 0.10
 |   |   |   |   |   |--- class: 0
 |   |   |   |   |--- Viscera_weight >  0.10
@@ -47,14 +44,11 @@ IF-THEN rules for the best basic decision tree:
 |   |--- Shell_weight <= 0.32
 |   |   |--- Shell_weight <= 0.18
 |   |   |   |--- Shell_weight <= 0.11
-|   |   |   |   |--- Sex <= 1.50
-|   |   |   |   |   |--- class: 2
-|   |   |   |   |--- Sex >  1.50
-|   |   |   |   |   |--- class: 2
+|   |   |   |   |--- class: 2
 |   |   |   |--- Shell_weight >  0.11
-|   |   |   |   |--- Length <= 0.40
+|   |   |   |   |--- Shucked_weight <= 0.12
 |   |   |   |   |   |--- class: 3
-|   |   |   |   |--- Length >  0.40
+|   |   |   |   |--- Shucked_weight >  0.12
 |   |   |   |   |   |--- class: 1
 |   |   |--- Shell_weight >  0.18
 |   |   |   |--- Shucked_weight <= 0.30

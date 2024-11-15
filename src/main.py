@@ -164,17 +164,17 @@ def main():
     if ed_state == 0:
         out_path.create_path()
 
-    # # q_a
-    # print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    # question_a()
-    #
-    # # q_b
-    # print("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-    # question_b()
-    #
-    # # q_c
-    # print("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
-    # question_c()
+    # q_a
+    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    question_a()
+
+    # q_b
+    print("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    question_b()
+
+    # q_c
+    print("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
+    question_c()
 
 if __name__ == "__main__":
         main()

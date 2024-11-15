@@ -317,11 +317,18 @@ def random_search_and_evaluate_metrics(model_name, model_class, param_space, X, 
         # Randomly select hyperparameters from the search space
         params = list(ParameterSampler(param_space, n_iter=1, random_state=random_seed + i))[0]
 
+        # if model_class in [MLPClassifier]:
+        #     params['early_stopping'] = True  # 启用早停
+
         # Initialize the model with the selected hyperparameters
         model = model_class(**params)
 
         # Split the data into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_seed + i)
+
+        # 动态调整 batch_size
+        batch_size = params.get('batch_size', 32)  # 默认 batch_size 为 32
+        batch_size = min(batch_size, X_train.shape[0])  # 将 batch_size 限制为不超过训练样本数
 
         # Train the model
         model.fit(X_train, y_train)
@@ -381,6 +388,7 @@ def random_search_and_evaluate_metrics(model_name, model_class, param_space, X, 
 
 
 def compare_l2_and_dropout(X, y,num_experiments, test_size, random_seed, output_dir, ):
+    print("================================================================================")
     # 获取数据集的类别数
     num_classes = len(np.unique(y))
 
@@ -410,7 +418,8 @@ def compare_l2_and_dropout(X, y,num_experiments, test_size, random_seed, output_
                 hidden_layer_sizes=(100,),
                 solver='adam',
                 alpha=weight_decay,
-                max_iter=500,
+                max_iter=700,
+                # early_stopping=True,  # 使用早停机制
                 random_state=random_seed + exp_num
             )
             l2_model.fit(X_train, y_train)
@@ -432,7 +441,8 @@ def compare_l2_and_dropout(X, y,num_experiments, test_size, random_seed, output_
                 layers.Dense(num_classes, activation='softmax')
             ])
             dropout_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-            dropout_model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=0)
+            dropout_model.fit(X_train, y_train, epochs=50, batch_size=min(128, X_train.shape[0]), verbose=0)
+            # dropout_model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=0)
             y_pred_dropout = np.argmax(dropout_model.predict(X_test), axis=1)
             dropout_accuracy = accuracy_score(y_test, y_pred_dropout)
             dropout_auc = roc_auc_score(pd.get_dummies(y_test), pd.get_dummies(y_pred_dropout), multi_class='ovr')
